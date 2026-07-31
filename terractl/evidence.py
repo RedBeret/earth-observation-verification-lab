@@ -36,7 +36,7 @@ def render_evidence(summary: VerificationSummary, output: Path | None = None) ->
     )
 
     markdown = [
-        f"# Verification summary — {summary.run_id}",
+        f"# Verification summary: {summary.run_id}",
         "",
         f"- Passed: {summary.passed}",
         f"- Failed: {summary.failed}",
