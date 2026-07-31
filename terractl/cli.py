@@ -14,7 +14,7 @@ from terractl.diagnostics import collect_diagnostics
 from terractl.doctor import print_doctor
 from terractl.environment import ensure_artifact_directories, project_root
 from terractl.faults import FAULT_NAMES
-from terractl.lifecycle import unavailable
+from terractl.lifecycle import compose_down, compose_status, compose_up
 from terractl.procedures import run_procedure
 from terractl.traceability import validate_traceability
 from terractl.validation import validate_repository
@@ -97,22 +97,23 @@ def seed() -> None:
 
 @app.command()
 def up() -> None:
-    raise typer.Exit(unavailable("up"))
+    raise typer.Exit(compose_up())
 
 
 @app.command()
 def status() -> None:
-    raise typer.Exit(unavailable("status"))
+    raise typer.Exit(compose_status())
 
 
 @app.command()
 def down() -> None:
-    raise typer.Exit(unavailable("down"))
+    raise typer.Exit(compose_down())
 
 
 @app.command(name="clean-room")
 def clean_room() -> None:
-    raise typer.Exit(unavailable("clean-room"))
+    print("Clean-room isolation proof is enabled in Stage 5.")
+    raise typer.Exit(2)
 
 
 @app.command()
@@ -142,7 +143,8 @@ def test_contract(
     if mode not in {"static", "postman", "all"}:
         raise typer.BadParameter("mode must be static, postman, or all")
     if mode == "postman":
-        raise typer.Exit(unavailable("contract postman"))
+        print("Postman contract execution is enabled in Stage 6.")
+        raise typer.Exit(2)
     raise typer.Exit(_pytest("contract"))
 
 
@@ -163,7 +165,8 @@ def test_resilience() -> None:
 
 @test_app.command("performance")
 def test_performance() -> None:
-    raise typer.Exit(unavailable("performance"))
+    print("Performance execution is enabled in Stage 6.")
+    raise typer.Exit(2)
 
 
 @test_app.command("security")
@@ -202,7 +205,8 @@ def fault_inject(name: str, apply: bool = typer.Option(False, "--apply")) -> Non
     if not apply:
         print(f"Refusing to inject {name} without --apply.")
         raise typer.Exit(2)
-    raise typer.Exit(unavailable(f"fault inject {name}"))
+    print(f"Fault handler for {name} is enabled in Stage 5.")
+    raise typer.Exit(2)
 
 
 @fault_app.command("clear")
@@ -210,7 +214,8 @@ def fault_clear(apply: bool = typer.Option(False, "--apply")) -> None:
     if not apply:
         print("Refusing to clear faults without --apply.")
         raise typer.Exit(2)
-    raise typer.Exit(unavailable("fault clear"))
+    print("Fault clearing is enabled in Stage 5.")
+    raise typer.Exit(2)
 
 
 if __name__ == "__main__":

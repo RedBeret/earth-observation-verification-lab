@@ -1,0 +1,250 @@
+name: ${COMPOSE_PROJECT_NAME}
+
+x-project-labels: &project-labels
+  org.northstar.project: earth-observation-verification-lab
+  org.northstar.environment: demo-west
+
+x-app-environment: &app-environment
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  MINIO_ENDPOINT: minio:9000
+  MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+  MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+  MINIO_SECURE: "false"
+  MINIO_BUCKET: scenes
+  NATS_URL: nats://nats:4222
+  NATS_TOKEN: ${NATS_TOKEN}
+  RUN_ID: ${RUN_ID:-local}
+  SOFTWARE_REVISION: ${SOFTWARE_REVISION:-working-tree}
+
+x-app-common: &app-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: terrawatch-lab:${IMAGE_TAG:-local}
+  restart: "no"
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  labels: *project-labels
+  environment: *app-environment
+  deploy:
+    resources:
+      limits:
+        cpus: "1.0"
+        memory: 512M
+
+services:
+  postgres:
+    image: postgis/postgis:17-3.5-alpine
+    restart: "no"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    labels: *project-labels
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    restart: "no"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    labels: *project-labels
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 384M
+
+  minio-init:
+    image: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}";
+        mc mb --ignore-existing local/scenes;
+        mc anonymous set none local/scenes
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    labels: *project-labels
+    security_opt:
+      - no-new-privileges:true
+
+  nats:
+    image: nats:2.11.4-alpine
+    command:
+      - --jetstream
+      - --store_dir=/data
+      - --auth=${NATS_TOKEN}
+      - --http_port=8222
+    restart: "no"
+    ports:
+      - "127.0.0.1:${NATS_CLIENT_PORT}:4222"
+      - "127.0.0.1:${NATS_MONITOR_PORT}:8222"
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8222/healthz"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    labels: *project-labels
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  migrate:
+    <<: *app-common
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *app-environment
+      SERVICE_NAME: migrate
+
+  nats-init:
+    <<: *app-common
+    command: ["python", "-m", "terrawatch.messaging"]
+    depends_on:
+      nats:
+        condition: service_healthy
+    environment:
+      <<: *app-environment
+      SERVICE_NAME: nats-init
+
+  ingest-api:
+    <<: *app-common
+    working_dir: /app/services/ingest-api
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "127.0.0.1:${INGEST_API_PORT}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      nats-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-environment
+      SERVICE_NAME: ingest-api
+    healthcheck:
+      test:
+        ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  event-api:
+    <<: *app-common
+    working_dir: /app/services/event-api
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "127.0.0.1:${EVENT_API_PORT}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      nats-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-environment
+      SERVICE_NAME: event-api
+    healthcheck:
+      test:
+        ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  analysis-api:
+    <<: *app-common
+    working_dir: /app/services/analysis-api
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "127.0.0.1:${ANALYSIS_API_PORT}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-environment
+      SERVICE_NAME: analysis-api
+    healthcheck:
+      test:
+        ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  imagery-worker:
+    <<: *app-common
+    command: ["python", "-m", "terrawatch.worker_runtime", "imagery-worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      nats-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-environment
+      SERVICE_NAME: imagery-worker
+
+  correlation-worker:
+    <<: *app-common
+    command: ["python", "-m", "terrawatch.worker_runtime", "correlation-worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      nats-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-environment
+      SERVICE_NAME: correlation-worker
+
+volumes:
+  postgres-data:
+    labels: *project-labels
+  minio-data:
+    labels: *project-labels
+  nats-data:
+    labels: *project-labels
