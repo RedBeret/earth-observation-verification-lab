@@ -32,6 +32,18 @@ def test_ingest_procedure_has_a_live_execution_target() -> None:
     )
 
 
+def test_stage_four_procedures_have_live_execution_targets() -> None:
+    assert PROCEDURE_TEST_TARGETS["TP-API-004"] == (
+        "contract",
+        "tests/contract/test_event_contract.py",
+        "tests/contract/test_analysis_contract.py",
+    )
+    assert PROCEDURE_TEST_TARGETS["TP-SYS-001"] == (
+        "system",
+        "tests/system/test_workflow.py",
+    )
+
+
 def test_ingest_procedure_runs_its_bound_test_target(monkeypatch) -> None:
     observed: dict[str, object] = {}
 

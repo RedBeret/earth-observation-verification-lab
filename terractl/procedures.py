@@ -12,8 +12,14 @@ import yaml
 
 from terractl.environment import ensure_artifact_directories, project_root
 
-PROCEDURE_TEST_TARGETS: dict[str, tuple[str, str]] = {
+PROCEDURE_TEST_TARGETS: dict[str, tuple[str, ...]] = {
+    "TP-API-004": (
+        "contract",
+        "tests/contract/test_event_contract.py",
+        "tests/contract/test_analysis_contract.py",
+    ),
     "TP-ING-002": ("contract", "tests/contract/test_ingest_contract.py"),
+    "TP-SYS-001": ("system", "tests/system/test_workflow.py"),
 }
 
 
@@ -52,7 +58,7 @@ def run_procedure(procedure_id: str) -> int:
     if target is None:
         print(f"{procedure_id} has no enabled execution handler in this implementation stage.")
         return 2
-    marker, test_path = target
+    marker, *test_paths = target
     ensure_artifact_directories()
     output = project_root() / "artifacts" / "junit" / f"procedure-{procedure_id}.xml"
     process = subprocess.run(
@@ -62,7 +68,7 @@ def run_procedure(procedure_id: str) -> int:
             "pytest",
             "-m",
             marker,
-            test_path,
+            *test_paths,
             "-vv",
             f"--junitxml={output}",
         ],
