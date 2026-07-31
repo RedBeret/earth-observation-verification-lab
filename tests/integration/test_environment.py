@@ -21,6 +21,8 @@ def _settings() -> Settings:
 def test_compose_ports_labels_and_resource_limits() -> None:
     config = rendered_compose_config()
     assert_loopback_ports(config)
+    postgres_healthcheck = config["services"]["postgres"]["healthcheck"]["test"]
+    assert "-h 127.0.0.1" in " ".join(postgres_healthcheck)
     required = {
         "postgres",
         "minio",
