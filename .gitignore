@@ -34,6 +34,9 @@ artifacts/state/*
 !artifacts/state/.gitkeep
 data/generated/
 
+# Local agent handoff plans (readable locally, never published)
+/plans/
+
 # Tool output
 node_modules/
 dist/
