@@ -22,12 +22,15 @@ steps:
   - id: resilience.baseline
     action: Establish and record a green service and data baseline.
     expected: All readiness checks pass and dead-letter counts are zero.
+  - id: resilience.stage_events
+    action: Pause the correlation worker, accept three events, and verify their outbox publication.
+    expected: Three durable telemetry messages are pending before the dependency outage.
   - id: fault.postgres_pause
     action: Pause only the labeled project PostgreSQL container.
     expected: Required readiness endpoints become unavailable.
-  - id: resilience.submit_events
-    action: Submit three generated telemetry events.
-    expected: Accepted work remains pending and is not falsely acknowledged as processed.
+  - id: resilience.release_worker
+    action: Resume the correlation worker while PostgreSQL remains paused.
+    expected: Pending work is attempted but cannot be falsely acknowledged as processed.
   - id: retry.observe
     action: Observe worker retries during the bounded outage interval.
     expected: Retry counts increase within configured bounds and no dead letter is created.
