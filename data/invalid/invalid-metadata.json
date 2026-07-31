@@ -1,0 +1,7 @@
+{
+  "capture_time": "not-a-time",
+  "declared_sha256": "not-a-digest",
+  "scene_id": "invalid id",
+  "schema_version": "1.0.0",
+  "source": ""
+}

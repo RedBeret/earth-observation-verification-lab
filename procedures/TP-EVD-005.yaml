@@ -1,0 +1,61 @@
+schema_version: 1.0.0
+id: TP-EVD-005
+title: Evidence consistency and redaction
+purpose: Prove all evidence views agree and cannot convert missing or sensitive data into success.
+requirement_references:
+  - COR-004
+  - SEC-001
+  - EVD-001
+  - EVD-002
+  - EVD-003
+  - EVD-004
+  - TST-001
+  - TST-002
+  - TST-003
+  - TST-004
+preconditions:
+  - At least one verification check has executed.
+  - Raw test, Postman, performance, and fault outputs are available or explicitly not observed.
+inputs:
+  - artifacts/junit/
+  - artifacts/reports/
+  - requirements/system-requirements.yaml
+  - requirements/verification-matrix.yaml
+steps:
+  - id: evidence.render
+    action: Render JSON, Markdown, CSV, and JUnit from one in-memory result.
+    expected: Every required format is present.
+  - id: evidence.counts
+    action: Read all formats back and compare passed, failed, skipped, and total counts.
+    expected: All counts and outcomes agree.
+  - id: evidence.zero_checks
+    action: Attempt to render a result containing zero checks.
+    expected: Rendering fails and cannot report pass.
+  - id: evidence.missing_observation
+    action: Render a check without an observed value.
+    expected: It is labeled not observed and fails.
+  - id: evidence.redaction
+    action: Inject test-only credential-shaped strings before rendering.
+    expected: Every credential-shaped value is redacted from all output.
+  - id: evidence.hashes
+    action: Inspect input and output hashes and manifest entries.
+    expected: Required hashes and environment identity are present.
+  - id: traceability.reconcile
+    action: Compare passing evidence with requirement status and mappings.
+    expected: Only requirements with passing records are verified.
+expected_observations:
+  - All formats agree and all required evidence is readable.
+  - Missing observations and zero checks fail.
+  - Credential-shaped strings are absent from rendered output.
+pass_fail_criteria:
+  - Every read-back, count, outcome, redaction, hash, and traceability check passes.
+cleanup:
+  - Preserve the generated evidence package.
+  - Remove test-only injected values and temporary files.
+evidence_locations:
+  - artifacts/evidence/<run-id>/
+  - artifacts/junit/postman.xml
+  - artifacts/reports/postman.json
+troubleshooting:
+  - Compare the authoritative JSON records with CSV rows and JUnit testcases.
+  - Run the redaction unit tests before regenerating evidence.

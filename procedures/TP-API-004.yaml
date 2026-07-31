@@ -1,0 +1,59 @@
+schema_version: 1.0.0
+id: TP-API-004
+title: Spatial and temporal filtering
+purpose: Prove inclusive spatial-boundary and temporal-window API behavior.
+requirement_references:
+  - EVT-001
+  - EVT-003
+  - COR-001
+  - COR-002
+  - COR-003
+  - API-001
+  - API-002
+  - API-004
+preconditions:
+  - The known-footprint scene is accepted.
+  - Generated boundary and time-window events are available.
+inputs:
+  - data/valid/scene-wgs84.tif
+  - data/events/events.json
+  - data/expected/correlations.json
+steps:
+  - id: correlation.inside_window
+    action: Submit an event inside the footprint and time window.
+    expected: One matched correlation is returned.
+  - id: correlation.outside_time
+    action: Submit an event inside the footprint but outside the time window.
+    expected: The analysis result reports temporal-non-match.
+  - id: correlation.outside_space
+    action: Submit an event outside the footprint but inside the time window.
+    expected: The analysis result reports spatial-non-match.
+  - id: correlation.boundary
+    action: Submit an event exactly on the footprint boundary.
+    expected: ST_Covers includes the event and produces a match.
+  - id: correlation.window_start
+    action: Submit an event exactly at the negative temporal boundary.
+    expected: The inclusive window produces a match.
+  - id: correlation.window_end
+    action: Submit an event exactly at the positive temporal boundary.
+    expected: The inclusive window produces a match.
+  - id: api.invalid_bbox
+    action: Query with reversed bounding-box limits.
+    expected: The API returns invalid-bbox in the common error envelope.
+  - id: api.invalid_time
+    action: Query with a start time after the end time.
+    expected: The API returns invalid-time-range in the common error envelope.
+expected_observations:
+  - Spatial and temporal matches agree with generated expected results.
+  - Invalid filters never return a successful empty result.
+pass_fail_criteria:
+  - All match, non-match, boundary, endpoint, and invalid-input cases agree with expectations.
+cleanup:
+  - Remove only events and correlations created for the procedure.
+  - Preserve evidence and sanitized diagnostics.
+evidence_locations:
+  - artifacts/evidence/<run-id>/test-summary.json
+  - artifacts/evidence/<run-id>/requirements-verification.json
+troubleshooting:
+  - Compare stored PostGIS geometries and UTC timestamps with generated expected values.
+  - Inspect correlation-worker match and non-match metrics.

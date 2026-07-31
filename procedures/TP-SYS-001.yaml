@@ -1,0 +1,71 @@
+schema_version: 1.0.0
+id: TP-SYS-001
+title: End-to-end Earth-observation workflow
+purpose: Prove the nominal imagery, telemetry, correlation, provenance, replay, and evidence path.
+requirement_references:
+  - ING-001
+  - ING-002
+  - ING-006
+  - CAT-001
+  - CAT-002
+  - CAT-003
+  - EVT-002
+  - COR-005
+  - API-003
+preconditions:
+  - The project environment is absent or confirmed clean.
+  - Deterministic synthetic fixtures have been generated.
+inputs:
+  - data/valid/scene-wgs84.tif
+  - data/valid/scene-wgs84.metadata.json
+  - data/events/events.json
+steps:
+  - id: system.clean
+    action: Confirm no prior project state can affect the run.
+    expected: Project record and object counts are zero.
+  - id: system.start
+    action: Start services and wait for every readiness endpoint.
+    expected: All required services report ready within the bounded timeout.
+  - id: ingest.valid_scene
+    action: Upload the valid WGS84 GeoTIFF and its generated metadata.
+    expected: The API accepts the scene and returns its calculated digest.
+  - id: ingest.verify_metadata
+    action: Read the scene through the analysis API.
+    expected: Raster dimensions, CRS, bounds, capture time, and digest match the fixture.
+  - id: storage.verify_object
+    action: Inspect the project MinIO bucket through the diagnostic client.
+    expected: Exactly one digest-addressed scene object is present.
+  - id: catalog.verify_stac
+    action: Retrieve the STAC item for the accepted scene.
+    expected: A STAC-compatible item contains the generated geometry and asset.
+  - id: event.submit
+    action: Submit the generated event inside the footprint and temporal window.
+    expected: The event is accepted with its idempotency key.
+  - id: correlation.wait
+    action: Poll the analysis result with bounded exponential backoff.
+    expected: Exactly one matching correlation becomes visible.
+  - id: provenance.verify
+    action: Compare result provenance with scene digest and repository revision.
+    expected: Data, software, requirements, and algorithm provenance are present.
+  - id: replay.verify
+    action: Replay the identical scene and event.
+    expected: Scene, event, object, and correlation counts do not increase.
+  - id: evidence.generate
+    action: Generate and reconcile the procedure evidence package.
+    expected: JSON, Markdown, CSV, and JUnit agree.
+expected_observations:
+  - One accepted scene, one accepted event, and one matched correlation.
+  - No duplicate state after replay.
+  - Matching content and provenance hashes.
+pass_fail_criteria:
+  - Every required step has an observed passing result.
+  - Missing observations or count changes fail the procedure.
+cleanup:
+  - Remove procedure-created records and objects through project-scoped cleanup.
+  - Collect diagnostics before cleanup when any step fails.
+evidence_locations:
+  - artifacts/evidence/<run-id>/test-summary.json
+  - artifacts/evidence/<run-id>/requirements-verification.json
+troubleshooting:
+  - Run ./scripts/terra.sh diagnostics and inspect the run-specific diagnostic directory.
+  - Check API readiness, worker retry counters, NATS consumers, database counts, and MinIO objects.

@@ -1,0 +1,54 @@
+schema_version: 1.0.0
+id: TP-ING-002
+title: Invalid scene rejection
+purpose: Prove invalid or conflicting imagery is rejected without retained partial state.
+requirement_references:
+  - ING-003
+  - ING-004
+  - ING-005
+  - ING-007
+preconditions:
+  - The project environment is green.
+  - Negative raster and metadata fixtures have been generated.
+inputs:
+  - data/invalid/truncated-raster.tif
+  - data/invalid/no-crs.tif
+  - data/invalid/invalid-metadata.json
+  - data/valid/scene-wgs84.tif
+steps:
+  - id: ingest.truncated
+    action: Upload the truncated raster.
+    expected: The API returns unreadable-raster and retains no accepted state or object.
+  - id: ingest.no_crs
+    action: Upload the raster without a CRS.
+    expected: The API returns missing-crs and retains no accepted state or object.
+  - id: ingest.invalid_bounds
+    action: Submit generated invalid geographic bounds.
+    expected: The API returns invalid-bounds and retains no accepted state or object.
+  - id: ingest.checksum_mismatch
+    action: Submit valid imagery with an incorrect declared checksum.
+    expected: The API returns checksum-mismatch and retains no accepted state or object.
+  - id: ingest.id_conflict
+    action: Reuse an accepted scene ID with different content.
+    expected: The API returns scene-id-conflict and does not replace the original.
+  - id: ingest.unsupported
+    action: Upload an unsupported file type.
+    expected: The API returns unsupported-media-type and retains no object.
+  - id: diagnostics.verify
+    action: Inspect structured rejection diagnostics.
+    expected: Every rejection has a sanitized request ID, error code, and run ID.
+expected_observations:
+  - Every invalid request has the documented error envelope.
+  - No invalid object, accepted scene, or STAC item remains.
+pass_fail_criteria:
+  - All negative cases are rejected and post-case state counts match the baseline.
+  - Any partial retained state fails the procedure.
+cleanup:
+  - Remove only procedure-created project records and objects in a finally path.
+  - Preserve redacted diagnostics and evidence.
+evidence_locations:
+  - artifacts/evidence/<run-id>/test-summary.json
+  - artifacts/diagnostics/<run-id>/
+troubleshooting:
+  - Compare request IDs with ingest-api structured logs.
+  - Inspect MinIO object names and scene processing states before cleanup.

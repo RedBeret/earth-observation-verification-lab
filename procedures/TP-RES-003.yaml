@@ -1,0 +1,60 @@
+schema_version: 1.0.0
+id: TP-RES-003
+title: Database outage and recovery
+purpose: Prove bounded retry and lossless recovery across a temporary PostgreSQL outage.
+requirement_references:
+  - EVT-004
+  - API-005
+  - RES-001
+  - RES-002
+  - RES-003
+  - RES-004
+  - RES-005
+  - SEC-002
+  - SEC-003
+preconditions:
+  - The baseline status and nominal workflow are green.
+  - No other fault is active.
+inputs:
+  - Three generated telemetry events with unique idempotency keys.
+  - The postgres-unavailable controlled fault.
+steps:
+  - id: resilience.baseline
+    action: Establish and record a green service and data baseline.
+    expected: All readiness checks pass and dead-letter counts are zero.
+  - id: fault.postgres_pause
+    action: Pause only the labeled project PostgreSQL container.
+    expected: Required readiness endpoints become unavailable.
+  - id: resilience.submit_events
+    action: Submit three generated telemetry events.
+    expected: Accepted work remains pending and is not falsely acknowledged as processed.
+  - id: retry.observe
+    action: Observe worker retries during the bounded outage interval.
+    expected: Retry counts increase within configured bounds and no dead letter is created.
+  - id: fault.postgres_restore
+    action: Restore PostgreSQL before retry exhaustion.
+    expected: Database health and service readiness recover.
+  - id: resilience.verify_processing
+    action: Wait for all three events to finish processing.
+    expected: All events process once with no data loss or duplicate correlation.
+  - id: resilience.verify_dlq
+    action: Inspect dead-letter stream and table.
+    expected: Both remain empty for this temporary outage.
+  - id: resilience.evidence
+    action: Generate recovery evidence.
+    expected: Expected and observed recovery fields are complete and passing.
+expected_observations:
+  - Readiness degrades during the outage and recovers afterward.
+  - All accepted events process without duplication or data loss.
+pass_fail_criteria:
+  - Bounded retries are observed and all events recover before exhaustion.
+  - A missing event, duplicate record, stale fault, or dead letter fails the procedure.
+cleanup:
+  - Restore PostgreSQL and clear the controlled fault in a finally path.
+  - Re-establish and record the green baseline.
+evidence_locations:
+  - artifacts/evidence/<run-id>/faults.json
+  - artifacts/diagnostics/<run-id>/
+troubleshooting:
+  - Inspect worker retry metrics, NATS consumer delivery counts, and PostgreSQL state.
+  - Run ./scripts/terra.sh fault clear --apply if the finally path reports a failure.

@@ -1,0 +1,34 @@
+{
+  "results": [
+    {
+      "event_id": "EVENT-SYN-INSIDE",
+      "expected_status": "matched"
+    },
+    {
+      "event_id": "EVENT-SYN-OUTSIDE",
+      "expected_status": "spatial-non-match"
+    },
+    {
+      "event_id": "EVENT-SYN-BOUNDARY",
+      "expected_status": "matched"
+    },
+    {
+      "event_id": "EVENT-SYN-BEFORE",
+      "expected_status": "temporal-non-match"
+    },
+    {
+      "event_id": "EVENT-SYN-AFTER",
+      "expected_status": "temporal-non-match"
+    },
+    {
+      "event_id": "EVENT-SYN-WINDOW-START",
+      "expected_status": "matched"
+    },
+    {
+      "event_id": "EVENT-SYN-WINDOW-END",
+      "expected_status": "matched"
+    }
+  ],
+  "scene_id": "SCENE-SYN-0001",
+  "temporal_window_seconds": 900
+}

@@ -1,0 +1,42 @@
+version: 1.0.0
+mappings:
+  - { requirement_id: ING-001, procedure_ids: [TP-SYS-001], verification_activities: [system.nominal_ingest] }
+  - { requirement_id: ING-002, procedure_ids: [TP-SYS-001], verification_activities: [unit.sha256, system.digest_provenance] }
+  - { requirement_id: ING-003, procedure_ids: [TP-ING-002], verification_activities: [ingest.truncated_raster] }
+  - { requirement_id: ING-004, procedure_ids: [TP-ING-002], verification_activities: [ingest.missing_crs] }
+  - { requirement_id: ING-005, procedure_ids: [TP-ING-002], verification_activities: [ingest.invalid_bounds] }
+  - { requirement_id: ING-006, procedure_ids: [TP-SYS-001], verification_activities: [system.scene_replay] }
+  - { requirement_id: ING-007, procedure_ids: [TP-ING-002], verification_activities: [ingest.scene_id_conflict] }
+  - { requirement_id: CAT-001, procedure_ids: [TP-SYS-001], verification_activities: [contract.stac_item] }
+  - { requirement_id: CAT-002, procedure_ids: [TP-SYS-001], verification_activities: [integration.catalog_raster_match] }
+  - { requirement_id: CAT-003, procedure_ids: [TP-SYS-001], verification_activities: [integration.digest_consistency] }
+  - { requirement_id: EVT-001, procedure_ids: [TP-API-004], verification_activities: [contract.telemetry_schema] }
+  - { requirement_id: EVT-002, procedure_ids: [TP-SYS-001], verification_activities: [system.event_replay] }
+  - { requirement_id: EVT-003, procedure_ids: [TP-API-004], verification_activities: [unit.coordinate_validation] }
+  - { requirement_id: EVT-004, procedure_ids: [TP-RES-003], verification_activities: [integration.event_dead_letter] }
+  - { requirement_id: COR-001, procedure_ids: [TP-API-004], verification_activities: [system.spatial_match] }
+  - { requirement_id: COR-002, procedure_ids: [TP-API-004], verification_activities: [system.spatial_non_match] }
+  - { requirement_id: COR-003, procedure_ids: [TP-API-004], verification_activities: [unit.temporal_boundaries] }
+  - { requirement_id: COR-004, procedure_ids: [TP-EVD-005], verification_activities: [evidence.missing_observation] }
+  - { requirement_id: COR-005, procedure_ids: [TP-SYS-001], verification_activities: [system.correlation_replay] }
+  - { requirement_id: API-001, procedure_ids: [TP-API-004], verification_activities: [contract.scene_bbox] }
+  - { requirement_id: API-002, procedure_ids: [TP-API-004], verification_activities: [contract.combined_search] }
+  - { requirement_id: API-003, procedure_ids: [TP-SYS-001], verification_activities: [system.provenance] }
+  - { requirement_id: API-004, procedure_ids: [TP-API-004], verification_activities: [contract.error_envelope] }
+  - { requirement_id: API-005, procedure_ids: [TP-RES-003], verification_activities: [integration.readiness] }
+  - { requirement_id: RES-001, procedure_ids: [TP-RES-003], verification_activities: [resilience.postgres_recovery] }
+  - { requirement_id: RES-002, procedure_ids: [TP-RES-003], verification_activities: [resilience.minio_recovery] }
+  - { requirement_id: RES-003, procedure_ids: [TP-RES-003], verification_activities: [integration.duplicate_delivery] }
+  - { requirement_id: RES-004, procedure_ids: [TP-RES-003], verification_activities: [unit.retry_bounds] }
+  - { requirement_id: RES-005, procedure_ids: [TP-RES-003], verification_activities: [system.clean_shutdown] }
+  - { requirement_id: SEC-001, procedure_ids: [TP-EVD-005], verification_activities: [security.redaction] }
+  - { requirement_id: SEC-002, procedure_ids: [TP-RES-003], verification_activities: [security.container_user] }
+  - { requirement_id: SEC-003, procedure_ids: [TP-RES-003], verification_activities: [security.loopback_bindings] }
+  - { requirement_id: EVD-001, procedure_ids: [TP-EVD-005], verification_activities: [evidence.formats] }
+  - { requirement_id: EVD-002, procedure_ids: [TP-EVD-005], verification_activities: [evidence.missing_observation] }
+  - { requirement_id: EVD-003, procedure_ids: [TP-EVD-005], verification_activities: [evidence.reconciliation] }
+  - { requirement_id: EVD-004, procedure_ids: [TP-EVD-005], verification_activities: [evidence.manifest] }
+  - { requirement_id: TST-001, procedure_ids: [TP-EVD-005], verification_activities: [traceability.complete_mapping] }
+  - { requirement_id: TST-002, procedure_ids: [TP-EVD-005], verification_activities: [traceability.test_references] }
+  - { requirement_id: TST-003, procedure_ids: [TP-EVD-005], verification_activities: [traceability.status_gate] }
+  - { requirement_id: TST-004, procedure_ids: [TP-EVD-005], verification_activities: [traceability.stale_reference] }

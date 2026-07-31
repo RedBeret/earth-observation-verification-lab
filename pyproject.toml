@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools==80.9.0", "wheel==0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "earth-observation-verification-lab"
+version = "0.1.0"
+description = "Synthetic Earth-observation systems integration and verification lab"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = { file = "LICENSE" }
+authors = [{ name = "Northstar Environmental Lab" }]
+dependencies = [
+  "alembic==1.16.4",
+  "fastapi==0.116.1",
+  "filelock==3.18.0",
+  "httpx==0.28.1",
+  "jsonschema==4.25.0",
+  "minio==7.2.15",
+  "nats-py==2.10.0",
+  "numpy==2.3.2",
+  "prometheus-client==0.22.1",
+  "psycopg[binary,pool]==3.2.9",
+  "pydantic==2.11.7",
+  "pydantic-settings==2.10.1",
+  "pystac==1.13.0",
+  "python-multipart==0.0.20",
+  "PyYAML==6.0.2",
+  "rasterio==1.4.3",
+  "shapely==2.1.1",
+  "SQLAlchemy==2.0.41",
+  "structlog==25.4.0",
+  "typer==0.16.0",
+  "uvicorn[standard]==0.35.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "bandit==1.8.6",
+  "mypy==1.17.0",
+  "pip-audit==2.9.0",
+  "pytest==8.4.1",
+  "pytest-cov==6.2.1",
+  "ruff==0.12.8",
+  "types-PyYAML==6.0.12.20250516",
+]
+
+[project.scripts]
+terractl = "terractl.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["terractl*", "terrawatch*"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+markers = [
+  "unit: isolated unit verification",
+  "contract: interface and schema verification",
+  "integration: dependency integration verification",
+  "system: end-to-end system verification",
+  "resilience: fault and recovery verification",
+  "pipeline: CI pipeline contract verification",
+  "security: repository and configuration security verification",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["terractl", "terrawatch"]
+exclude = ["database/migrations"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "data"]
+skips = ["B101"]
+
+[tool.coverage.run]
+source = ["terractl", "terrawatch"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
