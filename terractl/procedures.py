@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any, cast
 
 import jsonschema  # type: ignore[import-untyped]
 import yaml
 
-from terractl.environment import project_root
+from terractl.environment import ensure_artifact_directories, project_root
+
+PROCEDURE_TEST_TARGETS: dict[str, tuple[str, str]] = {
+    "TP-ING-002": ("contract", "tests/contract/test_ingest_contract.py"),
+}
 
 
 def load_procedure(procedure_id: str, root: Path | None = None) -> dict[str, Any]:
@@ -41,8 +47,26 @@ def validate_all_procedures(root: Path | None = None) -> list[str]:
 
 def run_procedure(procedure_id: str) -> int:
     document = load_procedure(procedure_id)
-    print(
-        f"{procedure_id} is valid with {len(document['steps'])} executable step definitions."
+    print(f"{procedure_id} is valid with {len(document['steps'])} executable step definitions.")
+    target = PROCEDURE_TEST_TARGETS.get(procedure_id)
+    if target is None:
+        print(f"{procedure_id} has no enabled execution handler in this implementation stage.")
+        return 2
+    marker, test_path = target
+    ensure_artifact_directories()
+    output = project_root() / "artifacts" / "junit" / f"procedure-{procedure_id}.xml"
+    process = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-m",
+            marker,
+            test_path,
+            "-vv",
+            f"--junitxml={output}",
+        ],
+        cwd=project_root(),
+        check=False,
     )
-    print("Procedure execution handlers are enabled with the associated service stage.")
-    return 0
+    return process.returncode
