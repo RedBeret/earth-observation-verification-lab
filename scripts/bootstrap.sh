@@ -35,8 +35,6 @@ fi
 "$VENV_PYTHON" -m pip install --disable-pip-version-check --upgrade "pip==25.1.1"
 "$VENV_PYTHON" -m pip install --disable-pip-version-check -r requirements/dev.txt
 
-if [[ ! -f .env.local ]]; then
-  "$VENV_PYTHON" -m terractl.environment initialize
-fi
+"$VENV_PYTHON" -m terractl.environment initialize
 
 printf '%s\n' "Bootstrap complete: $("$VENV_PYTHON" --version)"

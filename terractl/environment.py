@@ -51,6 +51,16 @@ class LocalEnvironment(BaseModel):
             "MINIO_CONSOLE_PORT": "19001",
             "NATS_CLIENT_PORT": "14222",
             "NATS_MONITOR_PORT": "18222",
+            "DATABASE_URL": (
+                "postgresql+psycopg://terrawatch:"
+                f"{self.postgres_password}@127.0.0.1:15432/terrawatch"
+            ),
+            "MINIO_ENDPOINT": "127.0.0.1:19000",
+            "MINIO_ACCESS_KEY": self.minio_root_user,
+            "MINIO_SECRET_KEY": self.minio_root_password,
+            "MINIO_SECURE": "false",
+            "MINIO_BUCKET": "scenes",
+            "NATS_URL": "nats://127.0.0.1:14222",
         }
         return "".join(f"{key}={value}\n" for key, value in values.items())
 
@@ -58,14 +68,28 @@ class LocalEnvironment(BaseModel):
 def initialize_environment(path: Path | None = None) -> Path:
     target = path or project_root() / ".env.local"
     if target.exists():
-        return target
-    environment = LocalEnvironment(
-        compose_project_name=compose_project_name(),
-        postgres_password=secrets.token_urlsafe(32),
-        minio_root_user=f"local-{secrets.token_hex(6)}",
-        minio_root_password=secrets.token_urlsafe(32),
-        nats_token=secrets.token_urlsafe(32),
-    )
+        existing = {}
+        for line in target.read_text(encoding="utf-8").splitlines():
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                existing[key] = value
+        environment = LocalEnvironment(
+            compose_project_name=existing.get(
+                "COMPOSE_PROJECT_NAME", compose_project_name()
+            ),
+            postgres_password=existing["POSTGRES_PASSWORD"],
+            minio_root_user=existing["MINIO_ROOT_USER"],
+            minio_root_password=existing["MINIO_ROOT_PASSWORD"],
+            nats_token=existing["NATS_TOKEN"],
+        )
+    else:
+        environment = LocalEnvironment(
+            compose_project_name=compose_project_name(),
+            postgres_password=secrets.token_urlsafe(32),
+            minio_root_user=f"local-{secrets.token_hex(6)}",
+            minio_root_password=secrets.token_urlsafe(32),
+            nats_token=secrets.token_urlsafe(32),
+        )
     target.write_text(environment.render(), encoding="utf-8")
     return target
 
