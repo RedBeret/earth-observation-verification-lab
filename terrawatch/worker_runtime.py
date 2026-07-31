@@ -26,7 +26,9 @@ async def run_worker(service_name: str) -> None:
 
         await run_imagery_worker(stop)
     else:
-        await stop.wait()
+        from terrawatch.correlation import run_correlation_worker
+
+        await run_correlation_worker(stop)
     logger.info("worker_stopped", unfinished_work_acknowledged=False)
 
 
