@@ -60,6 +60,7 @@ consider_namespace_packages = true
 markers = [
   "unit: isolated unit verification",
   "contract: interface and schema verification",
+  "static: runs without a live environment",
   "integration: dependency integration verification",
   "system: end-to-end system verification",
   "resilience: fault and recovery verification",

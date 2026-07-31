@@ -20,3 +20,51 @@ services:
     labels:
       org.northstar.project: earth-observation-verification-lab
       org.northstar.environment: demo-west
+
+  newman:
+    image: postman/newman:6.2.1-alpine
+    entrypoint: ["newman"]
+    command:
+      - run
+      - /etc/newman/terrawatch.postman_collection.json
+      - --environment
+      - /etc/newman/terrawatch.compose.postman_environment.json
+      - --reporters
+      - cli,json,junit
+      - --reporter-json-export
+      - /artifacts/reports/postman.json
+      - --reporter-junit-export
+      - /artifacts/junit/postman.xml
+      - --timeout-request
+      - "10000"
+      - --color
+      - "off"
+    volumes:
+      - ./contract/postman:/etc/newman:ro
+      - ./artifacts:/artifacts
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      org.northstar.project: earth-observation-verification-lab
+      org.northstar.environment: demo-west
+
+  k6:
+    image: grafana/k6:0.54.0
+    entrypoint: ["k6"]
+    command:
+      - run
+      - --quiet
+      - /scripts/k6/api-load.js
+    environment:
+      TERRAWATCH_INGEST_URL: http://ingest-api:8000
+      TERRAWATCH_EVENT_URL: http://event-api:8000
+      TERRAWATCH_ANALYSIS_URL: http://analysis-api:8000
+      K6_SUMMARY_PATH: /artifacts/reports/k6-summary.json
+    volumes:
+      - ./performance:/scripts:ro
+      - ./artifacts:/artifacts
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      org.northstar.project: earth-observation-verification-lab
+      org.northstar.environment: demo-west

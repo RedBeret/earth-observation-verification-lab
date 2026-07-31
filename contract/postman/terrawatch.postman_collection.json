@@ -1,0 +1,437 @@
+{
+  "info": {
+    "_postman_id": "6f5a1d90-0f4c-4f5e-9a0f-2a5c6b7d8e90",
+    "name": "TerraWatch verification contract",
+    "description": "Executable interface contract for the running TerraWatch demo-west environment. Every request asserts the documented status code, the shared error envelope, and the request-identifier header. All values are synthetic.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "event_id", "value": "EVENT-SYN-CONTRACT" },
+    { "key": "unknown_event_id", "value": "EVENT-SYN-ABSENT" },
+    { "key": "unknown_correlation_id", "value": "00000000-0000-4000-8000-000000000000" }
+  ],
+  "item": [
+    {
+      "name": "Operational surface",
+      "item": [
+        {
+          "name": "Ingest API reports health",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Request-ID", "value": "postman-ingest-health" }],
+            "url": { "raw": "{{ingest_url}}/healthz", "host": ["{{ingest_url}}"], "path": ["healthz"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('health responds 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('health names the service', function () {",
+                  "    pm.expect(pm.response.json().service).to.eql('ingest-api');",
+                  "});",
+                  "pm.test('response echoes the request identifier', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Request-ID')).to.eql('postman-ingest-health');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Event API reports health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{event_url}}/healthz", "host": ["{{event_url}}"], "path": ["healthz"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('health responds 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('health names the service', function () {",
+                  "    pm.expect(pm.response.json().service).to.eql('event-api');",
+                  "});",
+                  "pm.test('a request identifier is generated', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Request-ID')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Analysis API reports readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{analysis_url}}/readyz", "host": ["{{analysis_url}}"], "path": ["readyz"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('readiness responds 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('readiness reports ready', function () { pm.expect(body.status).to.eql('ready'); });",
+                  "pm.test('postgres dependency is reported', function () {",
+                  "    pm.expect(body.dependencies.postgres.ready).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Analysis API exposes metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{analysis_url}}/metrics", "host": ["{{analysis_url}}"], "path": ["metrics"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('metrics respond 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('request counter is exposed', function () {",
+                  "    pm.expect(pm.response.text()).to.include('terrawatch_api_requests_total');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ingest API publishes an OpenAPI document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{ingest_url}}/openapi.json", "host": ["{{ingest_url}}"], "path": ["openapi.json"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('document responds 200', function () { pm.response.to.have.status(200); });",
+                  "const document = pm.response.json();",
+                  "pm.test('scene submission is documented', function () {",
+                  "    pm.expect(document.paths).to.have.property('/v1/scenes');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Telemetry contract",
+      "item": [
+        {
+          "name": "Accept a synthetic telemetry event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "postman-{{event_id}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schema_version\": \"1.0.0\",\n  \"event_id\": \"{{event_id}}\",\n  \"event_type\": \"temperature-anomaly\",\n  \"observed_at\": \"2026-07-29T18:35:00Z\",\n  \"location\": { \"type\": \"Point\", \"coordinates\": [-120.0, 37.2] },\n  \"confidence\": 0.91,\n  \"source\": \"field-sensor-simulator\",\n  \"attributes\": { \"temperature_c\": 47.2 }\n}"
+            },
+            "url": { "raw": "{{event_url}}/v1/events", "host": ["{{event_url}}"], "path": ["v1", "events"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a new or replayed event is accepted', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});",
+                  "pm.test('the submitted identifier is returned', function () {",
+                  "    pm.expect(pm.response.json().event_id).to.eql(pm.variables.get('event_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replay the same telemetry event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "postman-{{event_id}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schema_version\": \"1.0.0\",\n  \"event_id\": \"{{event_id}}\",\n  \"event_type\": \"temperature-anomaly\",\n  \"observed_at\": \"2026-07-29T18:35:00Z\",\n  \"location\": { \"type\": \"Point\", \"coordinates\": [-120.0, 37.2] },\n  \"confidence\": 0.91,\n  \"source\": \"field-sensor-simulator\",\n  \"attributes\": { \"temperature_c\": 47.2 }\n}"
+            },
+            "url": { "raw": "{{event_url}}/v1/events", "host": ["{{event_url}}"], "path": ["v1", "events"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('an identical replay responds 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('the replay is reported as such', function () {",
+                  "    pm.expect(pm.response.json().replayed).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject an event without an idempotency key",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schema_version\": \"1.0.0\",\n  \"event_id\": \"{{event_id}}\",\n  \"event_type\": \"temperature-anomaly\",\n  \"observed_at\": \"2026-07-29T18:35:00Z\",\n  \"location\": { \"type\": \"Point\", \"coordinates\": [-120.0, 37.2] },\n  \"confidence\": 0.91,\n  \"source\": \"field-sensor-simulator\",\n  \"attributes\": { \"temperature_c\": 47.2 }\n}"
+            },
+            "url": { "raw": "{{event_url}}/v1/events", "host": ["{{event_url}}"], "path": ["v1", "events"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a missing idempotency key responds 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "const error = pm.response.json().error;",
+                  "pm.test('the documented error code is returned', function () {",
+                  "    pm.expect(error.code).to.eql('invalid-idempotency-key');",
+                  "});",
+                  "pm.test('the error envelope carries a request identifier', function () {",
+                  "    pm.expect(error.request_id).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject impossible coordinates",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "postman-invalid-coordinates" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schema_version\": \"1.0.0\",\n  \"event_id\": \"EVENT-SYN-BADPOINT\",\n  \"event_type\": \"temperature-anomaly\",\n  \"observed_at\": \"2026-07-29T18:35:00Z\",\n  \"location\": { \"type\": \"Point\", \"coordinates\": [-400.0, 137.2] },\n  \"confidence\": 0.91,\n  \"source\": \"field-sensor-simulator\",\n  \"attributes\": { \"temperature_c\": 47.2 }\n}"
+            },
+            "url": { "raw": "{{event_url}}/v1/events", "host": ["{{event_url}}"], "path": ["v1", "events"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('invalid coordinates respond 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('the event is reported as invalid', function () {",
+                  "    pm.expect(pm.response.json().error.code).to.eql('invalid-event');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Query contract",
+      "item": [
+        {
+          "name": "Read the accepted telemetry event",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{analysis_url}}/v1/events/{{event_id}}",
+              "host": ["{{analysis_url}}"],
+              "path": ["v1", "events", "{{event_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the event is readable', function () { pm.response.to.have.status(200); });",
+                  "pm.test('the identifier round-trips', function () {",
+                  "    pm.expect(pm.response.json().event_id).to.eql(pm.variables.get('event_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search events by bounding box",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{analysis_url}}/v1/events?bbox=-121,36,-119,38&page=1&page_size=10",
+              "host": ["{{analysis_url}}"],
+              "path": ["v1", "events"],
+              "query": [
+                { "key": "bbox", "value": "-121,36,-119,38" },
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the search responds 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('the page envelope is complete', function () {",
+                  "    pm.expect(body).to.have.all.keys('items', 'page', 'page_size', 'total');",
+                  "});",
+                  "pm.test('pagination echoes the request', function () {",
+                  "    pm.expect(body.page).to.eql(1);",
+                  "    pm.expect(body.page_size).to.eql(10);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject a malformed bounding box",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{analysis_url}}/v1/events?bbox=not-a-box",
+              "host": ["{{analysis_url}}"],
+              "path": ["v1", "events"],
+              "query": [{ "key": "bbox", "value": "not-a-box" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a malformed filter responds 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('the error envelope is complete', function () {",
+                  "    pm.expect(pm.response.json().error).to.have.all.keys('code', 'message', 'details', 'request_id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Report an unknown event as not found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{analysis_url}}/v1/events/{{unknown_event_id}}",
+              "host": ["{{analysis_url}}"],
+              "path": ["v1", "events", "{{unknown_event_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('an unknown event responds 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('the documented error code is returned', function () {",
+                  "    pm.expect(pm.response.json().error.code).to.eql('event-not-found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Report an unknown correlation as not found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{analysis_url}}/v1/correlations/{{unknown_correlation_id}}",
+              "host": ["{{analysis_url}}"],
+              "path": ["v1", "correlations", "{{unknown_correlation_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('an unknown correlation responds 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('the error envelope carries a request identifier', function () {",
+                  "    pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Return provenance for the accepted event",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{analysis_url}}/v1/provenance/event/{{event_id}}",
+              "host": ["{{analysis_url}}"],
+              "path": ["v1", "provenance", "event", "{{event_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('provenance responds 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('provenance names the resource', function () {",
+                  "    pm.expect(pm.response.json().resource_id).to.eql(pm.variables.get('event_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
