@@ -10,10 +10,13 @@ from uuid import uuid4
 
 import structlog
 from fastapi import FastAPI, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import RequestResponseEndpoint
 
+from terractl.safety import redact_text
 from terrawatch.config import get_settings
 from terrawatch.database import database_ready
 from terrawatch.logging import configure_logging
@@ -41,6 +44,26 @@ def normalized_request_id(candidate: str | None) -> str:
     return str(uuid4())
 
 
+def api_error_response(
+    request: Request,
+    status_code: int,
+    code: str,
+    message: str,
+    details: dict[str, object] | None = None,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "error": {
+                "code": code,
+                "message": redact_text(message),
+                "details": details or {},
+                "request_id": getattr(request.state, "request_id", "not-observed"),
+            }
+        },
+    )
+
+
 def create_app(service_name: str, dependencies: tuple[str, ...]) -> FastAPI:
     configure_logging()
     logger = structlog.get_logger(service=service_name)
@@ -48,6 +71,38 @@ def create_app(service_name: str, dependencies: tuple[str, ...]) -> FastAPI:
     app = FastAPI(title=f"TerraWatch {service_name}", version="1.0.0")
     app.state.service_name = service_name
     app.state.dependencies = dependencies
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(
+        request: Request,
+        error: StarletteHTTPException,
+    ) -> JSONResponse:
+        if error.status_code == 404:
+            return api_error_response(
+                request,
+                404,
+                "resource-not-found",
+                "Requested resource was not found.",
+            )
+        return api_error_response(
+            request,
+            error.status_code,
+            "http-error",
+            "The HTTP request could not be completed.",
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request,
+        error: RequestValidationError,
+    ) -> JSONResponse:
+        return api_error_response(
+            request,
+            422,
+            "invalid-request",
+            "Request parameters are invalid.",
+            details={"error_count": len(error.errors())},
+        )
 
     @app.middleware("http")
     async def request_context(request: Request, call_next: RequestResponseEndpoint) -> Response:
