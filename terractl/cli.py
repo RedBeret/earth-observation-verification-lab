@@ -20,6 +20,7 @@ from terractl.lifecycle import compose_down, compose_status, compose_up
 from terractl.locking import exclusive_run_lock
 from terractl.performance import run_performance
 from terractl.procedures import run_procedure
+from terractl.reporting import generate_evidence
 from terractl.security import run_security_gate
 from terractl.traceability import validate_traceability
 from terractl.validation import validate_repository
@@ -154,10 +155,21 @@ def clean_room() -> None:
 
 
 @app.command()
-def evidence() -> None:
-    """Generate evidence from collected test results."""
-    print("Evidence aggregation is enabled in Stage 6.")
-    raise typer.Exit(2)
+def evidence(
+    run_id: Annotated[str | None, typer.Option(help="Existing run identifier.")] = None,
+) -> None:
+    """Render and reconcile evidence from collected test results."""
+    ensure_artifact_directories()
+    try:
+        package = generate_evidence(run_id)
+    except ValueError as error:
+        print(f"Evidence generation failed: {error}")
+        raise typer.Exit(1) from error
+    summary = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    print(json.dumps(summary["totals"], indent=2, sort_keys=True))
+    print(f"Evidence package: {package.relative_to(project_root())}")
+    if summary["totals"]["failed"]:
+        raise typer.Exit(1)
 
 
 @app.command()

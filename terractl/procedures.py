@@ -19,6 +19,12 @@ PROCEDURE_TEST_TARGETS: dict[str, tuple[str, ...]] = {
         "tests/contract/test_event_contract.py",
         "tests/contract/test_analysis_contract.py",
     ),
+    "TP-EVD-005": (
+        "unit",
+        "tests/unit/test_reporting.py",
+        "tests/unit/test_evidence.py",
+        "tests/unit/test_traceability.py",
+    ),
     "TP-ING-002": ("contract", "tests/contract/test_ingest_contract.py"),
     "TP-RES-003": ("resilience", "tests/resilience/test_postgres_recovery.py"),
     "TP-SYS-001": ("system", "tests/system/test_workflow.py"),

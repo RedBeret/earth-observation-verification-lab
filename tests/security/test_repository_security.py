@@ -1,3 +1,4 @@
+# secret-scan: synthetic-fixture
 """Repository security and public-boundary verification.
 
 These checks are static so they can run before the environment exists and inside
@@ -96,6 +97,15 @@ def test_documented_local_defaults_are_allowed_but_real_values_are_not(tmp_path:
     assert [finding.rule for finding in scan_for_secrets([rejected], root=tmp_path)] == [
         "credential-in-url"
     ]
+
+
+def test_only_the_scanner_source_may_exempt_itself_from_the_term_scan(tmp_path: Path) -> None:
+    from terractl.security import declares_rule_definition_pragma
+
+    pragma = ["# boundary-scan: rule-definitions"]
+    assert declares_rule_definition_pragma(pragma, "terractl/security.py")
+    assert not declares_rule_definition_pragma(pragma, "terractl/evidence.py")
+    assert not declares_rule_definition_pragma(pragma, "tests/security/test_repository_security.py")
 
 
 def test_the_fixture_pragma_is_honoured_only_under_tests(tmp_path: Path) -> None:

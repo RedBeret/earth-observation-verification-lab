@@ -52,6 +52,12 @@ PLACEHOLDER_SECRETS = frozenset({"terrawatch", "local-placeholder", "CHANGE_ME"}
 # under tests/ may declare it.
 FIXTURE_PRAGMA = "secret-scan: synthetic-fixture"
 
+# This module necessarily spells out the patterns and markings it looks for, so it is
+# the single file allowed to exempt itself from the boundary term scan. No other path
+# may claim the exemption.
+BOUNDARY_PRAGMA = "boundary-scan: rule-definitions"  # boundary-scan: rule-definitions
+RULE_DEFINITION_PATH = "terractl/security.py"
+
 CONTROLLED_MARKINGS: tuple[str, ...] = (
     "NOFORN",
     "ORCON",
@@ -144,6 +150,13 @@ def declares_fixture_pragma(lines: list[str], relative: str) -> bool:
     return any(FIXTURE_PRAGMA in line for line in lines[:12])
 
 
+def declares_rule_definition_pragma(lines: list[str], relative: str) -> bool:
+    """Honour the rule-definition pragma only for this module's own source file."""
+    if relative != RULE_DEFINITION_PATH:
+        return False
+    return any(BOUNDARY_PRAGMA in line for line in lines)
+
+
 def scan_for_secrets(paths: list[Path], root: Path | None = None) -> list[Finding]:
     repo = root or project_root()
     leaked = _local_secret_values(repo)
@@ -192,12 +205,14 @@ def scan_public_boundary(root: Path | None = None) -> list[Finding]:
 
     for path in tracked_files(repo):
         relative = path.relative_to(repo).as_posix()
-        for number, line in enumerate(_readable_lines(path), start=1):
+        lines = _readable_lines(path)
+        defines_rules = declares_rule_definition_pragma(lines, relative)
+        for number, line in enumerate(lines, start=1):
             for rule, pattern in HOST_PATH_RULES:
                 if pattern.search(line):
                     findings.append(Finding(rule, relative, number))
             for marking in CONTROLLED_MARKINGS:
-                if marking in line:
+                if marking in line and not defines_rules:
                     findings.append(Finding("controlled-marking", relative, number))
             for address in IPV4_PATTERN.findall(line):
                 if address not in ALLOWED_ADDRESS_LITERALS:
