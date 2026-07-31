@@ -86,3 +86,7 @@ def test_placeholders_are_not_treated_as_commands() -> None:
 
 def test_routes_and_bare_filenames_are_not_treated_as_repository_paths() -> None:
     assert missing_paths("Fetch `/openapi.json` and create `private-terms.txt`.") == []
+
+
+def test_generated_output_paths_are_not_required_to_exist() -> None:
+    assert missing_paths("Newman writes `artifacts/reports/postman.json` on every run.") == []

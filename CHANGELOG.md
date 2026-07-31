@@ -22,3 +22,27 @@ All notable changes to this project are documented here.
   correlation, event-level analysis, spatial/time search, pagination, exact revision
   provenance, common error envelopes, and executable `TP-API-004`/`TP-SYS-001`
   coverage.
+- Identity-guarded controlled faults, redacted failure diagnostics, an exclusive run
+  lock for system and resilience runs, operator fault commands, the clean-room
+  isolation proof, and the resilience drills.
+- An asserted Postman interface contract with static completeness checks, and pinned
+  Newman and k6 services that write machine-readable reports.
+- Versioned performance thresholds that both the k6 script and the Python gate read
+  from one file.
+- A repository security gate covering credential shapes, the public boundary, container
+  posture, and the two documented scanner exceptions.
+- Reconciled multi-format evidence built from raw runner output, with a digest manifest,
+  redaction re-checks, and `not observed` results that cannot pass.
+- Jenkins, GitHub Actions, and GitLab definitions sharing one gate sequence, with
+  structural tests for parity, strict artifact failure, and unconditional teardown.
+- Operator, architecture, test plan, interface control, and troubleshooting documents,
+  with tests that verify every documented command, path, and link.
+- Clean-checkout verification and publish-gate scripts.
+
+### Fixed
+
+- Test collection failed when two test modules shared a basename. The suite now uses the
+  `importlib` import mode.
+- Compose output containing characters outside the console code page no longer breaks
+  lifecycle commands on Windows.
+- A personal directory path was removed from the worklog.

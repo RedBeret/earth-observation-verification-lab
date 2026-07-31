@@ -27,6 +27,9 @@ PATH_SUFFIXES = (
     ".tif",
 )
 PLACEHOLDER_CHARACTERS = ("<", ">", "*", "{", "}", "$")
+# Generated output is described by the documentation but is never checked in, so its
+# absence says nothing about whether the documentation is correct.
+GENERATED_PREFIXES = ("artifacts/", "data/generated/")
 
 
 # Written text stays in plain ASCII punctuation so diffs, terminals, and legacy consoles
@@ -103,7 +106,9 @@ def unknown_commands(text: str) -> list[str]:
 def missing_paths(text: str, root: Path | None = None) -> list[str]:
     repo = root or project_root()
     return sorted(
-        candidate for candidate in referenced_paths(text) if not (repo / candidate).exists()
+        candidate
+        for candidate in referenced_paths(text)
+        if not candidate.startswith(GENERATED_PREFIXES) and not (repo / candidate).exists()
     )
 
 
