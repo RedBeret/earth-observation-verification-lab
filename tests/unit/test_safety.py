@@ -1,3 +1,6 @@
+# secret-scan: synthetic-fixture
+# Every credential-shaped string below is invented for this test and exists only to
+# prove that redaction works. Nothing here is a real or reachable credential.
 from pathlib import Path
 
 import pytest
@@ -11,12 +14,18 @@ pytestmark = pytest.mark.unit
 @pytest.mark.parametrize(
     "source",
     [
-        "password=local-example-value",
-        "api_key: example-long-value",
-        "token = example-token-value",
-        "postgresql://user:example-database-password@postgres:5432/database",
-        "gho_abcdefghijklmnopqrstuvwxyz012345",
-        "-----BEGIN PRIVATE KEY-----\nexample\n-----END PRIVATE KEY-----",
+        pytest.param("password=local-example-value", id="password-assignment"),
+        pytest.param("api_key: example-long-value", id="api-key-assignment"),
+        pytest.param("token = example-token-value", id="token-assignment"),
+        pytest.param(
+            "postgresql://user:example-database-password@postgres:5432/database",
+            id="credential-in-url",
+        ),
+        pytest.param("gho_abcdefghijklmnopqrstuvwxyz012345", id="provider-token"),
+        pytest.param(
+            "-----BEGIN PRIVATE KEY-----\nexample\n-----END PRIVATE KEY-----",
+            id="private-key-block",
+        ),
     ],
 )
 def test_secret_redaction(source: str) -> None:

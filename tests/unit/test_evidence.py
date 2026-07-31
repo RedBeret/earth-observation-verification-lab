@@ -1,3 +1,6 @@
+# secret-scan: synthetic-fixture
+# The credential-shaped observation below is invented so the evidence renderer can be
+# proven to redact it. It is not a real or reachable credential.
 import json
 from pathlib import Path
 
