@@ -22,6 +22,8 @@ REQUIRED_DISCLAIMER = (
 )
 PRIVATE_TERMS_FILE = "private-prohibited-terms.txt"
 ALLOWED_EMAIL_DOMAINS = ("users.noreply.github.com", "example.invalid")
+# These are the address literals the boundary scanner accepts in tracked text. They are
+# data for a scanner, not a bind address.
 ALLOWED_ADDRESS_LITERALS = frozenset({"127.0.0.1", "0.0.0.0", "255.255.255.255"})
 
 SECRET_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (

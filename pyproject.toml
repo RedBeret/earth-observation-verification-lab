@@ -83,7 +83,16 @@ exclude = ["database/migrations"]
 
 [tool.bandit]
 exclude_dirs = ["tests", "data"]
-skips = ["B101"]
+# B101 assert: pytest and internal invariants.
+# B404, B603, B607 subprocess: this is an operator tool whose job is running docker,
+#   git, and pytest. Every argument list is built from literals or from identifiers that
+#   were validated first, and no call uses a shell.
+# B314, B405 xml.etree: the only XML parsed is JUnit output this repository generated,
+#   read back from inside its own artifact root.
+# B104 bind-all string: the only such literal is scanner data. Loopback-only publishing
+#   is enforced against the rendered Compose configuration by the security tests.
+# Everything else is reported. One narrow case carries an inline nosec with a reason.
+skips = ["B101", "B404", "B603", "B607", "B314", "B405", "B104"]
 
 [tool.coverage.run]
 source = ["terractl", "terrawatch"]

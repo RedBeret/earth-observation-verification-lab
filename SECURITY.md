@@ -37,5 +37,14 @@ covered by their own tests.
 An optional `private-prohibited-terms.txt` may add locally sensitive terms. That file is
 ignored by Git and its contents are never published.
 
+## Static analysis exceptions
+
+Bandit runs with a small, documented skip list rather than a blanket suppression. The
+reason for each entry is recorded in `pyproject.toml` next to the list. In summary:
+subprocess use is the point of an operator tool and never involves a shell, the only XML
+parsed is JUnit output this repository generated, and the only bind-all string is data
+belonging to the scanner. Loopback-only publishing and unprivileged containers are
+verified independently against the rendered Compose configuration.
+
 This lab is not a production deployment and does not provide a production security
 guarantee.

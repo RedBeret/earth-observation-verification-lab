@@ -20,7 +20,8 @@ def backoff_seconds(
     if not 0 <= jitter_ratio <= 1:
         raise ValueError("jitter ratio must be between zero and one")
     raw = min(cap, base * (2 ** (attempt - 1)))
-    sample = random.random() if random_value is None else random_value  # noqa: S311
+    # Retry jitter spreads reconnect attempts. It is not a security decision.
+    sample = random.random() if random_value is None else random_value  # nosec B311
     if not 0 <= sample <= 1:
         raise ValueError("random value must be between zero and one")
     jitter = raw * jitter_ratio * ((sample * 2) - 1)
