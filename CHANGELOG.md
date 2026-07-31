@@ -11,3 +11,6 @@ All notable changes to this project are documented here.
 - Project-local Python 3.12 CLI foundation, exact direct dependency pins, validation and
   evidence primitives, formal requirements and procedures, deterministic synthetic
   GeoTIFF/event generators, canonical fixtures, and unit verification suite.
+- Isolated Docker Compose environment with PostGIS, MinIO, NATS JetStream, five
+  application containers, guarded lifecycle operations, migrations, readiness,
+  metrics, and live integration verification.
