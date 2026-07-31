@@ -29,6 +29,23 @@ PATH_SUFFIXES = (
 PLACEHOLDER_CHARACTERS = ("<", ">", "*", "{", "}", "$")
 
 
+# Written text stays in plain ASCII punctuation so diffs, terminals, and legacy consoles
+# render it identically everywhere.
+# Written as escapes so this module does not trip its own check.
+TYPOGRAPHIC_CHARACTERS = (
+    "\u2014",  # em dash
+    "\u2013",  # en dash
+    "\u2018",  # left single quotation mark
+    "\u2019",  # right single quotation mark
+    "\u201c",  # left double quotation mark
+    "\u201d",  # right double quotation mark
+)
+
+
+def typographic_characters(text: str) -> list[str]:
+    return sorted({character for character in TYPOGRAPHIC_CHARACTERS if character in text})
+
+
 def known_commands() -> set[str]:
     """Every command the operator CLI actually exposes, including subgroups."""
     group = typer.main.get_command(app)

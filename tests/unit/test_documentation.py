@@ -6,9 +6,11 @@ from terractl.documentation import (
     known_commands,
     missing_paths,
     referenced_commands,
+    typographic_characters,
     unknown_commands,
 )
 from terractl.environment import project_root
+from terractl.security import tracked_files
 
 pytestmark = pytest.mark.unit
 
@@ -40,6 +42,25 @@ def test_documented_paths_exist(path) -> None:
 @pytest.mark.parametrize("path", DOCUMENTS, ids=IDENTIFIERS)
 def test_relative_links_resolve(path) -> None:
     assert broken_links(path) == []
+
+
+def test_tracked_text_uses_plain_punctuation() -> None:
+    offenders = {}
+    for path in tracked_files():
+        if path.suffix.lower() not in {".md", ".py", ".yml", ".yaml", ".json", ".sh", ".js"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        found = typographic_characters(text)
+        if found:
+            offenders[path.relative_to(project_root()).as_posix()] = found
+    assert offenders == {}
+
+
+def test_the_punctuation_checker_reports_a_typographic_dash() -> None:
+    assert typographic_characters("Stage 5 \u2014 resilience") == ["\u2014"]
 
 
 def test_the_command_checker_catches_an_invented_command() -> None:
