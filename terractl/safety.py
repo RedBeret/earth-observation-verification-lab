@@ -20,6 +20,10 @@ _REDACTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
         re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----"),
         "[REDACTED PRIVATE KEY]",
     ),
+    (
+        re.compile(r"(?i)([a-z][a-z0-9+.-]*://[^:\s/@]+:)([^@\s/]+)(@)"),
+        r"\1[REDACTED]\3",
+    ),
     (re.compile(r"\b(?:gh[opurs]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b"), "[REDACTED]"),
 )
 

@@ -14,6 +14,7 @@ pytestmark = pytest.mark.unit
         "password=local-example-value",
         "api_key: example-long-value",
         "token = example-token-value",
+        "postgresql://user:example-database-password@postgres:5432/database",
         "gho_abcdefghijklmnopqrstuvwxyz012345",
         "-----BEGIN PRIVATE KEY-----\nexample\n-----END PRIVATE KEY-----",
     ],
