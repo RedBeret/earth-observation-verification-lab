@@ -94,6 +94,40 @@ def wait_for_processing_attempt(
     raise AssertionError(f"message {message_id} did not record a {status} attempt")
 
 
+def wait_for_event(
+    event_id: str,
+    status: str,
+    timeout: float = 20,
+) -> TelemetryEventRecord:
+    deadline = time.monotonic() + timeout
+    factory = live_session_factory()
+    while time.monotonic() < deadline:
+        with factory() as session:
+            event = session.get(TelemetryEventRecord, event_id)
+            if event is not None and event.processing_status == status:
+                session.expunge(event)
+                return event
+        time.sleep(0.25)
+    raise AssertionError(f"event {event_id} did not reach {status}")
+
+
+def wait_for_analysis(
+    event_id: str,
+    status: str,
+    timeout: float = 20,
+) -> AnalysisResult:
+    deadline = time.monotonic() + timeout
+    factory = live_session_factory()
+    while time.monotonic() < deadline:
+        with factory() as session:
+            result = session.get(AnalysisResult, (event_id, "correlator-1.0.0"))
+            if result is not None and result.status == status:
+                session.expunge(result)
+                return result
+        time.sleep(0.25)
+    raise AssertionError(f"event {event_id} did not produce analysis status {status}")
+
+
 def scene_rows() -> Iterator[Scene]:
     factory = live_session_factory()
     with factory() as session:

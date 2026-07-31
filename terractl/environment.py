@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+import subprocess
 import sys
 from pathlib import Path
 
@@ -26,6 +27,34 @@ def compose_project_name(root: Path | None = None) -> str:
     return f"terrawatch-{ENVIRONMENT_NAME}-{suffix}"
 
 
+def repository_revision(root: Path | None = None) -> str:
+    repo = (root or project_root()).resolve()
+    revision = subprocess.run(
+        ["git", "rev-parse", "--short=12", "HEAD"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=10,
+        check=False,
+    )
+    if revision.returncode:
+        return "not-observed"
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=10,
+        check=False,
+    )
+    suffix = "-dirty" if status.returncode or status.stdout.strip() else ""
+    return f"{revision.stdout.strip()}{suffix}"
+
+
 class LocalEnvironment(BaseModel):
     project_slug: str = PROJECT_SLUG
     compose_project_name: str
@@ -33,6 +62,7 @@ class LocalEnvironment(BaseModel):
     minio_root_user: str
     minio_root_password: str
     nats_token: str
+    software_revision: str = "not-observed"
 
     def render(self) -> str:
         values = {
@@ -61,6 +91,7 @@ class LocalEnvironment(BaseModel):
             "MINIO_SECURE": "false",
             "MINIO_BUCKET": "scenes",
             "NATS_URL": "nats://127.0.0.1:14222",
+            "SOFTWARE_REVISION": self.software_revision,
         }
         return "".join(f"{key}={value}\n" for key, value in values.items())
 
@@ -79,6 +110,7 @@ def initialize_environment(path: Path | None = None) -> Path:
             minio_root_user=existing["MINIO_ROOT_USER"],
             minio_root_password=existing["MINIO_ROOT_PASSWORD"],
             nats_token=existing["NATS_TOKEN"],
+            software_revision=repository_revision(),
         )
     else:
         environment = LocalEnvironment(
@@ -87,6 +119,7 @@ def initialize_environment(path: Path | None = None) -> Path:
             minio_root_user=f"local-{secrets.token_hex(6)}",
             minio_root_password=secrets.token_urlsafe(32),
             nats_token=secrets.token_urlsafe(32),
+            software_revision=repository_revision(),
         )
     target.write_text(environment.render(), encoding="utf-8")
     return target
