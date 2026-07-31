@@ -54,8 +54,9 @@ terractl = "terractl.cli:app"
 include = ["terractl*", "terrawatch*"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers --import-mode=importlib"
 testpaths = ["tests"]
+consider_namespace_packages = true
 markers = [
   "unit: isolated unit verification",
   "contract: interface and schema verification",
