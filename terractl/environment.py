@@ -74,9 +74,7 @@ def initialize_environment(path: Path | None = None) -> Path:
                 key, value = line.split("=", 1)
                 existing[key] = value
         environment = LocalEnvironment(
-            compose_project_name=existing.get(
-                "COMPOSE_PROJECT_NAME", compose_project_name()
-            ),
+            compose_project_name=existing.get("COMPOSE_PROJECT_NAME", compose_project_name()),
             postgres_password=existing["POSTGRES_PASSWORD"],
             minio_root_user=existing["MINIO_ROOT_USER"],
             minio_root_password=existing["MINIO_ROOT_PASSWORD"],

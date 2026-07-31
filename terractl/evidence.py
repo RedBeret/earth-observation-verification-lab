@@ -36,9 +36,7 @@ def render_evidence(summary: VerificationSummary, output: Path | None = None) ->
     ]
     for record in summary.records:
         observation = (
-            "not observed"
-            if record.observation_status == "not observed"
-            else str(record.observed)
+            "not observed" if record.observation_status == "not observed" else str(record.observed)
         )
         markdown.append(
             f"| {record.requirement_id} | {record.check_id} | "
@@ -104,9 +102,7 @@ def reconcile_evidence(package: Path) -> dict[str, int]:
     json_total = len(records)
     json_failed = sum(not record["passed"] for record in records)
 
-    with (package / "requirements-verification.csv").open(
-        encoding="utf-8", newline=""
-    ) as handle:
+    with (package / "requirements-verification.csv").open(encoding="utf-8", newline="") as handle:
         csv_total = sum(1 for _ in csv.DictReader(handle))
 
     junit_root = ElementTree.parse(package / "junit.xml").getroot()

@@ -34,10 +34,7 @@ def test_compose_ports_labels_and_resource_limits() -> None:
     assert required <= set(config["services"])
     for service_name in required:
         service = config["services"][service_name]
-        assert (
-            service["labels"]["org.northstar.project"]
-            == "earth-observation-verification-lab"
-        )
+        assert service["labels"]["org.northstar.project"] == "earth-observation-verification-lab"
         assert service["deploy"]["resources"]["limits"]["memory"]
         assert service["security_opt"] == ["no-new-privileges:true"]
 

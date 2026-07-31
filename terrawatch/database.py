@@ -85,9 +85,7 @@ class Correlation(Base):
 
     correlation_id: Mapped[str] = mapped_column(String(96), primary_key=True)
     scene_id: Mapped[str] = mapped_column(ForeignKey("scenes.scene_id"), nullable=False)
-    event_id: Mapped[str] = mapped_column(
-        ForeignKey("telemetry_events.event_id"), nullable=False
-    )
+    event_id: Mapped[str] = mapped_column(ForeignKey("telemetry_events.event_id"), nullable=False)
     spatial_match: Mapped[bool] = mapped_column(Boolean, nullable=False)
     temporal_delta_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
     correlation_status: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -99,9 +97,7 @@ class Correlation(Base):
 class AnalysisResult(Base):
     __tablename__ = "analysis_results"
 
-    event_id: Mapped[str] = mapped_column(
-        ForeignKey("telemetry_events.event_id"), primary_key=True
-    )
+    event_id: Mapped[str] = mapped_column(ForeignKey("telemetry_events.event_id"), primary_key=True)
     algorithm_version: Mapped[str] = mapped_column(String(32), primary_key=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     evaluated_scenes: Mapped[int] = mapped_column(Integer, nullable=False)
