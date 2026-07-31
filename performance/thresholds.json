@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Versioned performance acceptance thresholds for the TerraWatch demo-west environment.",
+  "thresholds": {
+    "health_p95_ms": 250,
+    "query_p95_ms": 750,
+    "max_error_rate": 0.01,
+    "min_check_success_rate": 0.99
+  },
+  "load": {
+    "virtual_users": 5,
+    "duration": "30s",
+    "graceful_stop": "5s"
+  }
+}
