@@ -11,12 +11,14 @@ from typing import Annotated
 import typer
 
 from terractl.clean_room import clean_room_proof
+from terractl.contract import run_newman
 from terractl.diagnostics import collect_diagnostics, collect_failure_diagnostics
 from terractl.doctor import print_doctor
 from terractl.environment import ensure_artifact_directories, project_root
 from terractl.faults import FAULT_NAMES, clear_faults, inject_fault
 from terractl.lifecycle import compose_down, compose_status, compose_up
 from terractl.locking import exclusive_run_lock
+from terractl.performance import run_performance
 from terractl.procedures import run_procedure
 from terractl.traceability import validate_traceability
 from terractl.validation import validate_repository
@@ -38,6 +40,22 @@ def _run(command: list[str], failure_context: str = "command") -> int:
         except Exception as error:
             print(f"Diagnostic collection failed: {type(error).__name__}")
     return process.returncode
+
+
+def _pytest_selection(expression: str, label: str) -> int:
+    ensure_artifact_directories()
+    output = project_root() / "artifacts" / "junit" / f"{label}.xml"
+    return _run(
+        [
+            str(Path(__import__("sys").executable)),
+            "-m",
+            "pytest",
+            "-m",
+            expression,
+            f"--junitxml={output}",
+        ],
+        failure_context=f"test-{label}",
+    )
 
 
 def _pytest(level: str) -> int:
@@ -160,10 +178,14 @@ def test_contract(
 ) -> None:
     if mode not in {"static", "postman", "all"}:
         raise typer.BadParameter("mode must be static, postman, or all")
+    if mode == "static":
+        raise typer.Exit(_pytest_selection("contract and static", "contract-static"))
     if mode == "postman":
-        print("Postman contract execution is enabled in Stage 6.")
-        raise typer.Exit(2)
-    raise typer.Exit(_pytest("contract"))
+        raise typer.Exit(run_newman())
+    code = _pytest("contract")
+    if code:
+        raise typer.Exit(code)
+    raise typer.Exit(run_newman())
 
 
 @test_app.command("integration")
@@ -183,8 +205,7 @@ def test_resilience() -> None:
 
 @test_app.command("performance")
 def test_performance() -> None:
-    print("Performance execution is enabled in Stage 6.")
-    raise typer.Exit(2)
+    raise typer.Exit(run_performance())
 
 
 @test_app.command("security")
