@@ -18,7 +18,10 @@ class Settings(BaseSettings):
     service_name: str = "terrawatch"
     run_id: str = "local"
     software_revision: str = "working-tree"
-    database_url: str = "postgresql+psycopg://terrawatch:terrawatch@127.0.0.1:15432/terrawatch"
+    database_url: str = (
+        "postgresql+psycopg://terrawatch:terrawatch@127.0.0.1:15432/terrawatch"
+        "?connect_timeout=3&tcp_user_timeout=3000"
+    )
     minio_endpoint: str = "127.0.0.1:19000"
     minio_access_key: str = "local-placeholder"
     minio_secret_key: str = "local-placeholder"

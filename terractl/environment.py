@@ -84,6 +84,7 @@ class LocalEnvironment(BaseModel):
             "DATABASE_URL": (
                 "postgresql+psycopg://terrawatch:"
                 f"{self.postgres_password}@127.0.0.1:15432/terrawatch"
+                "?connect_timeout=3&tcp_user_timeout=3000"
             ),
             "MINIO_ENDPOINT": "127.0.0.1:19000",
             "MINIO_ACCESS_KEY": self.minio_root_user,

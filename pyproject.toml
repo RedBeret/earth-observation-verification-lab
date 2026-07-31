@@ -32,6 +32,7 @@ dependencies = [
   "SQLAlchemy==2.0.41",
   "structlog==25.4.0",
   "typer==0.16.0",
+  "urllib3==2.7.0",
   "uvicorn[standard]==0.35.0",
 ]
 
