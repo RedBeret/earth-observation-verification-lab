@@ -47,6 +47,11 @@
   "properties": {
     "datetime": "2026-07-29T18:30:00Z",
     "proj:epsg": 4326,
+    "proj:shape": [
+      64,
+      64
+    ],
+    "proj:transform": null,
     "source": "synthetic-generator"
   },
   "stac_version": "1.0.0",

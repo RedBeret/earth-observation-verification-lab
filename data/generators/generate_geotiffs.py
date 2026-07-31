@@ -78,6 +78,13 @@ def generate(root: Path) -> dict[str, Path]:
         transform=from_bounds(*WGS84_BBOX, width=64, height=64),
         scene_id="SCENE-SYN-INVALID-CRS",
     )
+    invalid_bounds = invalid / "invalid-bounds.tif"
+    _write_raster(
+        invalid_bounds,
+        crs="EPSG:4326",
+        transform=from_bounds(190.0, 10.0, 191.0, 11.0, width=64, height=64),
+        scene_id="SCENE-SYN-INVALID-BOUNDS",
+    )
     content = wgs84.read_bytes()
     (invalid / "truncated-raster.tif").write_bytes(content[: max(128, len(content) // 4)])
 
@@ -107,5 +114,6 @@ def generate(root: Path) -> dict[str, Path]:
         "wgs84": wgs84,
         "projected": projected,
         "no_crs": no_crs,
+        "invalid_bounds": invalid_bounds,
         "truncated": invalid / "truncated-raster.tif",
     }

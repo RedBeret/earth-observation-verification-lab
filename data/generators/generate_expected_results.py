@@ -35,6 +35,8 @@ def _expected_stac(asset_hash: str) -> dict[str, object]:
             "datetime": CAPTURE_TIME,
             "source": "synthetic-generator",
             "proj:epsg": 4326,
+            "proj:shape": [64, 64],
+            "proj:transform": None,
         },
         "assets": {
             "data": {

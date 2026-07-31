@@ -15,6 +15,7 @@ The generator creates:
   `[-120.10, 37.10, -119.90, 37.30]`;
 - `valid/scene-projected.tif`: 64×64 EPSG:3857 raster;
 - `invalid/no-crs.tif`: a readable raster intentionally missing CRS metadata;
+- `invalid/invalid-bounds.tif`: a readable EPSG:4326 raster outside valid longitude;
 - `invalid/truncated-raster.tif`: a deterministic truncation of the valid WGS84 file;
 - valid and invalid scene metadata;
 - inside, outside, boundary, before, during, after, duplicate, and endpoint events; and
