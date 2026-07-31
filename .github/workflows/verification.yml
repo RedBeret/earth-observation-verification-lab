@@ -1,0 +1,110 @@
+name: verification
+
+# Orchestration only. Every step calls a repository entrypoint so that a green
+# pipeline and a green local run mean the same thing.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: verification-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Local verification sequence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bootstrap the local environment
+        run: ./scripts/bootstrap.sh
+
+      - name: Inspect required tooling
+        run: ./scripts/terra.sh doctor
+
+      - name: Validate schemas and procedures
+        run: ./scripts/terra.sh validate
+
+      - name: Validate requirement traceability
+        run: ./scripts/terra.sh traceability
+
+      - name: Run unit verification
+        run: ./scripts/terra.sh test unit
+
+      # Static contract checks run before the environment exists.
+      - name: Run static contract verification
+        run: ./scripts/terra.sh test contract --mode static
+
+      - name: Run repository security verification
+        run: ./scripts/terra.sh test security
+
+      - name: Run pipeline contract verification
+        run: ./scripts/terra.sh test pipeline
+
+      - name: Start the integration environment
+        run: ./scripts/terra.sh up
+
+      - name: Report environment status
+        run: ./scripts/terra.sh status
+
+      - name: Run integration verification
+        run: ./scripts/terra.sh test integration
+
+      - name: Execute the imagery ingestion procedure
+        run: ./scripts/terra.sh procedure run TP-ING-002
+
+      - name: Execute the interface procedure
+        run: ./scripts/terra.sh procedure run TP-API-004
+
+      - name: Execute the end-to-end system procedure
+        run: ./scripts/terra.sh procedure run TP-SYS-001
+
+      # The Postman phase runs against the started system.
+      - name: Run the Postman contract against the running system
+        run: ./scripts/terra.sh test contract --mode postman
+
+      - name: Run performance verification
+        run: ./scripts/terra.sh test performance
+
+      - name: Execute the database recovery procedure
+        run: ./scripts/terra.sh procedure run TP-RES-003
+
+      - name: Run resilience verification
+        run: ./scripts/terra.sh test resilience
+
+      - name: Execute the evidence integrity procedure
+        run: ./scripts/terra.sh procedure run TP-EVD-005
+
+      - name: Render and reconcile evidence
+        run: ./scripts/terra.sh evidence
+
+      - name: Collect diagnostics
+        if: always()
+        run: ./scripts/terra.sh diagnostics
+
+      - name: Publish verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-artifacts
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Tear down the environment
+        if: always()
+        run: ./scripts/terra.sh down
