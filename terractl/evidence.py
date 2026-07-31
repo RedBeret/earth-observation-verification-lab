@@ -3,13 +3,24 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
+import platform
+import sys
 from pathlib import Path
 from xml.etree import ElementTree
 
-from terractl.environment import artifacts_root
+from terractl.environment import artifacts_root, compose_project_name, repository_revision
 from terractl.models import VerificationSummary
 from terractl.safety import redact_text, redact_value, safe_artifact_path
+
+MANIFEST_NAME = "manifest.json"
+RENDERED_NAMES = (
+    "test-summary.json",
+    "test-summary.md",
+    "requirements-verification.csv",
+    "junit.xml",
+)
 
 
 def render_evidence(summary: VerificationSummary, output: Path | None = None) -> Path:
@@ -90,17 +101,64 @@ def render_evidence(summary: VerificationSummary, output: Path | None = None) ->
         encoding="utf-8",
         xml_declaration=True,
     )
+    write_manifest(package, summary)
     reconcile_evidence(package)
     return package
 
 
+def file_digest(path: Path) -> str:
+    digest = hashlib.sha256()
+    digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def write_manifest(package: Path, summary: VerificationSummary) -> Path:
+    """Record file hashes and environment identity so evidence cannot be edited quietly."""
+    manifest = {
+        "schema_version": "1.0.0",
+        "run_id": summary.run_id,
+        "generated_at": summary.generated_at.isoformat(),
+        "environment": {
+            "compose_project": compose_project_name(),
+            "software_revision": repository_revision(),
+            "python_version": platform.python_version(),
+            "platform": sys.platform,
+        },
+        "totals": {
+            "total": summary.total,
+            "passed": summary.passed,
+            "failed": summary.failed,
+        },
+        "files": {
+            name: file_digest(package / name)
+            for name in RENDERED_NAMES
+            if (package / name).is_file()
+        },
+    }
+    path = package / MANIFEST_NAME
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    return path
+
+
 def reconcile_evidence(package: Path) -> dict[str, int]:
+    missing = [name for name in RENDERED_NAMES if not (package / name).is_file()]
+    if missing:
+        raise ValueError(f"evidence package is missing: {sorted(missing)}")
+
     json_payload = json.loads((package / "test-summary.json").read_text(encoding="utf-8"))
     records = json_payload["records"]
     if not records:
         raise ValueError("zero checks cannot reconcile")
     json_total = len(records)
     json_failed = sum(not record["passed"] for record in records)
+
+    unobserved_passes = [
+        record["check_id"]
+        for record in records
+        if record["observation_status"] == "not observed" and record["passed"]
+    ]
+    if unobserved_passes:
+        raise ValueError(f"unobserved checks cannot pass: {sorted(unobserved_passes)}")
 
     with (package / "requirements-verification.csv").open(encoding="utf-8", newline="") as handle:
         csv_total = sum(1 for _ in csv.DictReader(handle))
@@ -112,4 +170,21 @@ def reconcile_evidence(package: Path) -> dict[str, int]:
         raise ValueError("evidence totals do not agree")
     if json_failed != junit_failed:
         raise ValueError("evidence failures do not agree")
+
+    for name in RENDERED_NAMES:
+        text = (package / name).read_text(encoding="utf-8")
+        if redact_text(text) != text:
+            raise ValueError(f"evidence redaction failed for {name}")
+
+    manifest_path = package / MANIFEST_NAME
+    if not manifest_path.is_file():
+        raise ValueError("evidence package has no manifest")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for name, expected in manifest["files"].items():
+        observed = file_digest(package / name)
+        if observed != expected:
+            raise ValueError(f"evidence manifest hash does not match {name}")
+    if manifest["totals"]["total"] != json_total:
+        raise ValueError("evidence manifest totals do not agree")
+
     return {"total": json_total, "failed": json_failed, "passed": json_total - json_failed}
