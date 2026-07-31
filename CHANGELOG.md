@@ -14,3 +14,7 @@ All notable changes to this project are documented here.
 - Isolated Docker Compose environment with PostGIS, MinIO, NATS JetStream, five
   application containers, guarded lifecycle operations, migrations, readiness,
   metrics, and live integration verification.
+- Verified imagery ingestion with bounded validation, digest-addressed object storage,
+  transactional outbox delivery, durable worker processing, STAC/PostGIS cataloging,
+  idempotent replay, conflict handling, structured diagnostics, and executable
+  `TP-ING-002` coverage.
