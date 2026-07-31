@@ -17,10 +17,20 @@ private-prohibited-terms.txt
 # Generated data and verification output
 artifacts/*
 !artifacts/.gitkeep
+!artifacts/evidence/
+artifacts/evidence/*
 !artifacts/evidence/.gitkeep
+!artifacts/junit/
+artifacts/junit/*
 !artifacts/junit/.gitkeep
+!artifacts/diagnostics/
+artifacts/diagnostics/*
 !artifacts/diagnostics/.gitkeep
+!artifacts/reports/
+artifacts/reports/*
 !artifacts/reports/.gitkeep
+!artifacts/state/
+artifacts/state/*
 !artifacts/state/.gitkeep
 data/generated/
 

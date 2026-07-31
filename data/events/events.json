@@ -1,0 +1,132 @@
+{
+  "duplicate_event_id": "EVENT-SYN-INSIDE",
+  "events": [
+    {
+      "attributes": {
+        "temperature_c": 47.2
+      },
+      "confidence": 0.91,
+      "event_id": "EVENT-SYN-INSIDE",
+      "event_type": "temperature-anomaly",
+      "location": {
+        "coordinates": [
+          -120.0,
+          37.2
+        ],
+        "type": "Point"
+      },
+      "observed_at": "2026-07-29T18:35:00Z",
+      "schema_version": "1.0.0",
+      "source": "field-sensor-simulator"
+    },
+    {
+      "attributes": {
+        "temperature_c": 45.0
+      },
+      "confidence": 0.91,
+      "event_id": "EVENT-SYN-OUTSIDE",
+      "event_type": "temperature-anomaly",
+      "location": {
+        "coordinates": [
+          -121.0,
+          38.0
+        ],
+        "type": "Point"
+      },
+      "observed_at": "2026-07-29T18:35:00Z",
+      "schema_version": "1.0.0",
+      "source": "field-sensor-simulator"
+    },
+    {
+      "attributes": {
+        "temperature_c": 46.0
+      },
+      "confidence": 0.91,
+      "event_id": "EVENT-SYN-BOUNDARY",
+      "event_type": "temperature-anomaly",
+      "location": {
+        "coordinates": [
+          -120.1,
+          37.2
+        ],
+        "type": "Point"
+      },
+      "observed_at": "2026-07-29T18:30:00Z",
+      "schema_version": "1.0.0",
+      "source": "field-sensor-simulator"
+    },
+    {
+      "attributes": {
+        "temperature_c": 44.0
+      },
+      "confidence": 0.91,
+      "event_id": "EVENT-SYN-BEFORE",
+      "event_type": "temperature-anomaly",
+      "location": {
+        "coordinates": [
+          -120.0,
+          37.2
+        ],
+        "type": "Point"
+      },
+      "observed_at": "2026-07-29T18:14:00Z",
+      "schema_version": "1.0.0",
+      "source": "field-sensor-simulator"
+    },
+    {
+      "attributes": {
+        "temperature_c": 48.0
+      },
+      "confidence": 0.91,
+      "event_id": "EVENT-SYN-AFTER",
+      "event_type": "temperature-anomaly",
+      "location": {
+        "coordinates": [
+          -120.0,
+          37.2
+        ],
+        "type": "Point"
+      },
+      "observed_at": "2026-07-29T18:46:00Z",
+      "schema_version": "1.0.0",
+      "source": "field-sensor-simulator"
+    },
+    {
+      "attributes": {
+        "temperature_c": 43.0
+      },
+      "confidence": 0.91,
+      "event_id": "EVENT-SYN-WINDOW-START",
+      "event_type": "temperature-anomaly",
+      "location": {
+        "coordinates": [
+          -120.0,
+          37.2
+        ],
+        "type": "Point"
+      },
+      "observed_at": "2026-07-29T18:15:00Z",
+      "schema_version": "1.0.0",
+      "source": "field-sensor-simulator"
+    },
+    {
+      "attributes": {
+        "temperature_c": 49.0
+      },
+      "confidence": 0.91,
+      "event_id": "EVENT-SYN-WINDOW-END",
+      "event_type": "temperature-anomaly",
+      "location": {
+        "coordinates": [
+          -120.0,
+          37.2
+        ],
+        "type": "Point"
+      },
+      "observed_at": "2026-07-29T18:45:00Z",
+      "schema_version": "1.0.0",
+      "source": "field-sensor-simulator"
+    }
+  ],
+  "seed": 240729
+}

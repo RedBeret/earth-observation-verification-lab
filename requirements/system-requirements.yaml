@@ -1,0 +1,286 @@
+version: 1.0.0
+title: TerraWatch system requirements
+defaults: &defaults
+  status: planned
+  evidence_location: artifacts/evidence/<run-id>/requirements-verification.json
+requirements:
+  - <<: *defaults
+    id: ING-001
+    statement: The system shall accept a valid synthetic GeoTIFF scene.
+    rationale: Demonstrates the primary Earth-observation ingestion path.
+    verification_method: test
+    procedure_ids: [TP-SYS-001]
+    automated_tests: [tests/system/test_workflow.py::test_nominal_workflow]
+  - <<: *defaults
+    id: ING-002
+    statement: The system shall calculate and preserve a SHA-256 digest for every accepted scene.
+    rationale: Provides content identity and provenance.
+    verification_method: test
+    procedure_ids: [TP-SYS-001]
+    automated_tests: [tests/unit/test_hashing.py::test_sha256_file]
+  - <<: *defaults
+    id: ING-003
+    statement: The system shall reject an unreadable raster.
+    rationale: Prevents invalid assets from entering storage.
+    verification_method: test
+    procedure_ids: [TP-ING-002]
+    automated_tests: [tests/contract/test_ingest_contract.py::test_truncated_raster]
+  - <<: *defaults
+    id: ING-004
+    statement: The system shall reject a scene without a valid CRS.
+    rationale: Spatial operations require a declared coordinate reference system.
+    verification_method: test
+    procedure_ids: [TP-ING-002]
+    automated_tests: [tests/contract/test_ingest_contract.py::test_missing_crs]
+  - <<: *defaults
+    id: ING-005
+    statement: The system shall reject invalid geographic bounds.
+    rationale: Invalid extents would make correlation results unreliable.
+    verification_method: test
+    procedure_ids: [TP-ING-002]
+    automated_tests: [tests/unit/test_validation.py::test_invalid_bbox]
+  - <<: *defaults
+    id: ING-006
+    statement: Reingesting identical content shall not create duplicate records.
+    rationale: Repeatable execution requires content idempotency.
+    verification_method: test
+    procedure_ids: [TP-SYS-001]
+    automated_tests: [tests/system/test_workflow.py::test_duplicate_scene_replay]
+  - <<: *defaults
+    id: ING-007
+    statement: Reusing a scene ID with different content shall be rejected as a conflict.
+    rationale: Stable identifiers cannot refer to different observations.
+    verification_method: test
+    procedure_ids: [TP-ING-002]
+    automated_tests: [tests/contract/test_ingest_contract.py::test_scene_id_conflict]
+  - <<: *defaults
+    id: CAT-001
+    statement: Every accepted scene shall produce a STAC-compatible item.
+    rationale: Supports portable catalog interoperability.
+    verification_method: test
+    procedure_ids: [TP-SYS-001]
+    automated_tests: [tests/contract/test_stac_contract.py::test_stac_item]
+  - <<: *defaults
+    id: CAT-002
+    statement: Catalog metadata shall agree with metadata read from the stored raster.
+    rationale: Prevents stale or fabricated catalog fields.
+    verification_method: analysis
+    procedure_ids: [TP-SYS-001]
+    automated_tests: [tests/integration/test_imagery_worker.py::test_catalog_matches_raster]
+  - <<: *defaults
+    id: CAT-003
+    statement: Object storage and database records shall contain matching content digests.
+    rationale: Provides storage-to-catalog integrity.
+    verification_method: test
+    procedure_ids: [TP-SYS-001]
+    automated_tests: [tests/integration/test_ingest_dependencies.py::test_digest_consistency]
+  - <<: *defaults
+    id: EVT-001
+    statement: Telemetry events shall be validated against a versioned JSON Schema.
+    rationale: Provides an explicit producer-consumer contract.
+    verification_method: test
+    procedure_ids: [TP-API-004]
+    automated_tests: [tests/contract/test_event_contract.py::test_schema_version]
+  - <<: *defaults
+    id: EVT-002
+    statement: Duplicate event delivery shall be idempotent.
+    rationale: JetStream delivery may be repeated.
+    verification_method: test
+    procedure_ids: [TP-SYS-001]
+    automated_tests: [tests/system/test_workflow.py::test_duplicate_event_replay]
+  - <<: *defaults
+    id: EVT-003
+    statement: Invalid coordinates shall be rejected.
+    rationale: Invalid positions cannot participate in geospatial analysis.
+    verification_method: test
+    procedure_ids: [TP-API-004]
+    automated_tests: [tests/unit/test_validation.py::test_invalid_coordinates]
+  - <<: *defaults
+    id: EVT-004
+    statement: Exhausted event-processing retries shall enter a visible dead-letter state.
+    rationale: Failures must not disappear after retry exhaustion.
+    verification_method: demonstration
+    procedure_ids: [TP-RES-003]
+    automated_tests: [tests/integration/test_dead_letters.py::test_event_dead_letter]
+  - <<: *defaults
+    id: COR-001
+    statement: Events inside a scene footprint shall spatially match that scene.
+    rationale: Provides the primary spatial correlation behavior.
+    verification_method: test
+    procedure_ids: [TP-API-004]
+    automated_tests: [tests/system/test_workflow.py::test_spatial_match]
+  - <<: *defaults
+    id: COR-002
+    statement: Events outside a scene footprint shall not spatially match.
+    rationale: Prevents false spatial associations.
+    verification_method: test
+    procedure_ids: [TP-API-004]
+    automated_tests: [tests/system/test_workflow.py::test_spatial_non_match]
+  - <<: *defaults
+    id: COR-003
+    statement: The declared temporal correlation window shall be applied.
+    rationale: Correlations must be relevant in time as well as space.
+    verification_method: test
+    procedure_ids: [TP-API-004]
+    automated_tests: [tests/unit/test_validation.py::test_temporal_window_boundaries]
+  - <<: *defaults
+    id: COR-004
+    statement: Missing spatial or temporal observations shall fail rather than default to a match.
+    rationale: Unknown data must not become affirmative evidence.
+    verification_method: test
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/unit/test_evidence.py::test_missing_observation_fails]
+  - <<: *defaults
+    id: COR-005
+    statement: Duplicate processing shall not create duplicate correlations.
+    rationale: Protects results under at-least-once message delivery.
+    verification_method: test
+    procedure_ids: [TP-SYS-001]
+    automated_tests: [tests/system/test_workflow.py::test_duplicate_correlation]
+  - <<: *defaults
+    id: API-001
+    statement: The API shall support bounding-box scene search.
+    rationale: Operators need spatial discovery of imagery.
+    verification_method: test
+    procedure_ids: [TP-API-004]
+    automated_tests: [tests/contract/test_analysis_contract.py::test_scene_bbox_search]
+  - <<: *defaults
+    id: API-002
+    statement: The API shall support combined bounding-box and time-range search.
+    rationale: Analysis commonly combines spatial and temporal constraints.
+    verification_method: test
+    procedure_ids: [TP-API-004]
+    automated_tests: [tests/contract/test_analysis_contract.py::test_combined_search]
+  - <<: *defaults
+    id: API-003
+    statement: API results shall include source and software provenance.
+    rationale: Results must be traceable to data and software versions.
+    verification_method: inspection
+    procedure_ids: [TP-SYS-001]
+    automated_tests: [tests/system/test_workflow.py::test_provenance]
+  - <<: *defaults
+    id: API-004
+    statement: Unknown resources shall return a consistent machine-readable error.
+    rationale: Clients require predictable failure contracts.
+    verification_method: test
+    procedure_ids: [TP-API-004]
+    automated_tests: [tests/contract/test_error_contract.py::test_missing_resource]
+  - <<: *defaults
+    id: API-005
+    statement: Health and readiness endpoints shall reflect dependency state.
+    rationale: Orchestration must distinguish a live process from a ready service.
+    verification_method: test
+    procedure_ids: [TP-RES-003]
+    automated_tests: [tests/integration/test_readiness.py::test_dependency_degradation]
+  - <<: *defaults
+    id: RES-001
+    statement: Processing shall recover after a temporary database outage.
+    rationale: A transient database loss must not lose accepted work.
+    verification_method: demonstration
+    procedure_ids: [TP-RES-003]
+    automated_tests: [tests/resilience/test_outages.py::test_postgres_recovery]
+  - <<: *defaults
+    id: RES-002
+    statement: Processing shall recover after a temporary object-storage outage.
+    rationale: A transient storage loss must not corrupt processing state.
+    verification_method: demonstration
+    procedure_ids: [TP-RES-003]
+    automated_tests: [tests/resilience/test_outages.py::test_minio_recovery]
+  - <<: *defaults
+    id: RES-003
+    statement: Processing shall tolerate duplicate NATS delivery.
+    rationale: JetStream provides at-least-once delivery.
+    verification_method: test
+    procedure_ids: [TP-RES-003]
+    automated_tests: [tests/integration/test_duplicate_delivery.py::test_duplicate_message]
+  - <<: *defaults
+    id: RES-004
+    statement: Retries shall be bounded and observable.
+    rationale: Infinite retries conceal permanent failures.
+    verification_method: test
+    procedure_ids: [TP-RES-003]
+    automated_tests: [tests/unit/test_retry.py::test_retry_exhaustion]
+  - <<: *defaults
+    id: RES-005
+    statement: Services shall shut down cleanly without acknowledging unfinished work.
+    rationale: Shutdown must preserve pending work for redelivery.
+    verification_method: demonstration
+    procedure_ids: [TP-RES-003]
+    automated_tests: [tests/system/test_shutdown.py::test_unfinished_work_redelivered]
+  - <<: *defaults
+    id: SEC-001
+    statement: Secrets shall not appear in logs or evidence artifacts.
+    rationale: Verification artifacts may be retained or published.
+    verification_method: analysis
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/unit/test_safety.py::test_secret_redaction]
+  - <<: *defaults
+    id: SEC-002
+    statement: Containers shall run as non-root where supported.
+    rationale: Least privilege limits container impact.
+    verification_method: inspection
+    procedure_ids: [TP-RES-003]
+    automated_tests: [tests/security/test_compose_security.py::test_non_root]
+  - <<: *defaults
+    id: SEC-003
+    statement: Published service ports shall bind to loopback only.
+    rationale: The lab must not expose local services to external networks.
+    verification_method: inspection
+    procedure_ids: [TP-RES-003]
+    automated_tests: [tests/security/test_compose_security.py::test_loopback_bindings]
+  - <<: *defaults
+    id: EVD-001
+    statement: Evidence shall be generated as JSON, Markdown, CSV, and JUnit.
+    rationale: Supports machine, operator, and CI consumers.
+    verification_method: inspection
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/unit/test_evidence.py::test_all_formats]
+  - <<: *defaults
+    id: EVD-002
+    statement: Missing observations shall be reported as not observed and shall fail.
+    rationale: Missing evidence cannot prove a requirement.
+    verification_method: test
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/unit/test_evidence.py::test_missing_observation_fails]
+  - <<: *defaults
+    id: EVD-003
+    statement: Evidence formats shall agree on outcome and result counts.
+    rationale: Divergent reports undermine verification confidence.
+    verification_method: analysis
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/unit/test_evidence.py::test_reconciliation]
+  - <<: *defaults
+    id: EVD-004
+    statement: Each evidence package shall record revision, versions, input hashes, environment, and run ID.
+    rationale: Evidence must identify its inputs and execution context.
+    verification_method: inspection
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/contract/test_evidence_contract.py::test_manifest_fields]
+  - <<: *defaults
+    id: TST-001
+    statement: Every requirement shall map to at least one verification activity.
+    rationale: Unmapped requirements cannot be objectively verified.
+    verification_method: analysis
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/unit/test_traceability.py::test_complete_mapping]
+  - <<: *defaults
+    id: TST-002
+    statement: Every automated system or integration test shall reference a requirement or risk.
+    rationale: High-level tests require a traceable purpose.
+    verification_method: analysis
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/traceability/test_test_references.py::test_requirement_markers]
+  - <<: *defaults
+    id: TST-003
+    statement: A requirement shall not be marked verified without passing evidence.
+    rationale: Status must reflect observed results.
+    verification_method: test
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/unit/test_evidence.py::test_failed_record_not_verified]
+  - <<: *defaults
+    id: TST-004
+    statement: Unknown or stale requirement references shall fail the traceability gate.
+    rationale: Stale references create false coverage.
+    verification_method: test
+    procedure_ids: [TP-EVD-005]
+    automated_tests: [tests/unit/test_traceability.py::test_stale_reference_fails]

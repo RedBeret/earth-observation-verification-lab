@@ -1,0 +1,22 @@
+{
+  "README.md": "d7ae68fd06c80f29fb818ad1323a9d985d9563260055b781caee91ddbe795ca1",
+  "__init__.py": "ccf303bd9e311a6750043c8ecfa9a7200ae1143ff85f71d2383721308131b44e",
+  "__pycache__/__init__.cpython-312.pyc": "56fdae1b654e101e708d293c5f382bfef888a4fa95745f1d1b863bf834644b83",
+  "events/events.json": "c83b84b3bdb3367ea22635393511be0029584f26398768e690f8dfd68b66cc5e",
+  "expected/correlations.json": "c24b0b0f7ef4e29eabf62d5397ac3844409e77b369c63a6af3a75a09251efd88",
+  "expected/stac-scene-syn-0001.json": "b3de04985c0aa1f77c9b8061a2c9f4b3184f2de8fb3fe5d4cbaf7973c4a6d2b6",
+  "generators/__init__.py": "dc8c47ddce32c8059e3481a4a25ea7b9b9d98009cf3a94dd498d794d4b5c9a3a",
+  "generators/__pycache__/__init__.cpython-312.pyc": "b318a9cfe828ea0d643780241a8234bd5b4a9e167491bfa568451a4b1202745d",
+  "generators/__pycache__/generate_events.cpython-312.pyc": "fab5427e449271331329c63d85d7d462956641e6de3d25d5aaa9a26dafae86a0",
+  "generators/__pycache__/generate_expected_results.cpython-312.pyc": "fd94519d4a39ee414e23121547af6c6bf7c3b7d2e1a1ea287be51729ec4f97a3",
+  "generators/__pycache__/generate_geotiffs.cpython-312.pyc": "5cba4928b3f3c0561e3443090d13ed0073481c95ae6e8e77ec1b6d156516d937",
+  "generators/generate_events.py": "22629eb0cdf3a0a9f0179ec55c9b3845b2ff8414f53709d64cea49cfdee4317f",
+  "generators/generate_expected_results.py": "530517be7aae081bca8894a691b8390ae6ae82e8ef1a9fe7376ba41f2ab2bfc8",
+  "generators/generate_geotiffs.py": "4ad6e2f7479c3977733a71dbb38645e4514cbea1b107b2e180da42cb87ba078b",
+  "invalid/invalid-metadata.json": "e7adffb294e290c5fce6a8a7b7ea2c91d7cdfc3aa89642a9fcc200c27e373cfe",
+  "invalid/no-crs.tif": "16cd2092eaf682b7e18e4b12af9d0e5ee4570b658b8d627ce100637da0c28aa1",
+  "invalid/truncated-raster.tif": "bd9b9fa18aced76d6c247b62a6756f0d0fef00cde8a18c0a29907ab3e3b41278",
+  "valid/scene-projected.tif": "179fa46ea9bea308719c8b5bfc0ff26941d9dc58dd9f285df48f1d8b05965e20",
+  "valid/scene-wgs84.metadata.json": "c8d17bc1fc3fa4dfbee7cc572ce243cb2b050d2023dd6ba6527432d5fa7745d3",
+  "valid/scene-wgs84.tif": "2df21fcb05fbde9c858f9d30ef4e83108684563f295397c6e09a0a1c71198967"
+}

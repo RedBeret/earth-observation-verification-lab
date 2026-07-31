@@ -1,0 +1,54 @@
+{
+  "assets": {
+    "data": {
+      "checksum:multihash": "12202df21fcb05fbde9c858f9d30ef4e83108684563f295397c6e09a0a1c71198967",
+      "href": "s3://scenes/sha256/2d/2df21fcb05fbde9c858f9d30ef4e83108684563f295397c6e09a0a1c71198967.tif",
+      "roles": [
+        "data"
+      ],
+      "type": "image/tiff; application=geotiff"
+    }
+  },
+  "bbox": [
+    -120.1,
+    37.1,
+    -119.9,
+    37.3
+  ],
+  "geometry": {
+    "coordinates": [
+      [
+        [
+          -120.1,
+          37.1
+        ],
+        [
+          -119.9,
+          37.1
+        ],
+        [
+          -119.9,
+          37.3
+        ],
+        [
+          -120.1,
+          37.3
+        ],
+        [
+          -120.1,
+          37.1
+        ]
+      ]
+    ],
+    "type": "Polygon"
+  },
+  "id": "SCENE-SYN-0001",
+  "links": [],
+  "properties": {
+    "datetime": "2026-07-29T18:30:00Z",
+    "proj:epsg": 4326,
+    "source": "synthetic-generator"
+  },
+  "stac_version": "1.0.0",
+  "type": "Feature"
+}
