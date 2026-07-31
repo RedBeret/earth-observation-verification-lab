@@ -21,7 +21,12 @@ async def run_worker(service_name: str) -> None:
         loop.add_signal_handler(signal_name, stop.set)
     await ensure_streams()
     logger.info("worker_ready")
-    await stop.wait()
+    if service_name == "imagery-worker":
+        from terrawatch.imagery_worker import run_imagery_worker
+
+        await run_imagery_worker(stop)
+    else:
+        await stop.wait()
     logger.info("worker_stopped", unfinished_work_acknowledged=False)
 
 

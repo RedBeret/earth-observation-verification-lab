@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 from collections.abc import Awaitable, Callable
 from uuid import uuid4
 
+import structlog
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from starlette.middleware.base import RequestResponseEndpoint
 
+from terrawatch.config import get_settings
 from terrawatch.database import database_ready
+from terrawatch.logging import configure_logging
 from terrawatch.messaging import messaging_ready
 from terrawatch.storage import storage_ready
 
@@ -28,18 +32,27 @@ LATENCY = Histogram(
 )
 
 AsyncProbe = Callable[[], Awaitable[tuple[bool, str]]]
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+
+
+def normalized_request_id(candidate: str | None) -> str:
+    if candidate is not None and REQUEST_ID_PATTERN.fullmatch(candidate):
+        return candidate
+    return str(uuid4())
 
 
 def create_app(service_name: str, dependencies: tuple[str, ...]) -> FastAPI:
+    configure_logging()
+    logger = structlog.get_logger(service=service_name)
+    run_id = get_settings().run_id
     app = FastAPI(title=f"TerraWatch {service_name}", version="1.0.0")
     app.state.service_name = service_name
     app.state.dependencies = dependencies
 
     @app.middleware("http")
-    async def request_context(
-        request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        request_id = request.headers.get("X-Request-ID") or str(uuid4())
+    async def request_context(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        request_id = normalized_request_id(request.headers.get("X-Request-ID"))
+        request.state.request_id = request_id
         started = time.perf_counter()
         try:
             response = await call_next(request)
@@ -59,6 +72,15 @@ def create_app(service_name: str, dependencies: tuple[str, ...]) -> FastAPI:
         response.headers["X-Request-ID"] = request_id
         REQUESTS.labels(service_name, request.method, request.url.path, response.status_code).inc()
         LATENCY.labels(service_name, request.method, request.url.path).observe(duration)
+        logger.info(
+            "request_completed",
+            request_id=request_id,
+            run_id=run_id,
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=round(duration * 1000, 3),
+        )
         return response
 
     @app.get("/healthz")

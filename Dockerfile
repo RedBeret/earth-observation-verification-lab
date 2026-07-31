@@ -7,7 +7,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends libexpat1 \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --create-home app
+
+COPY requirements/runtime.txt ./requirements/runtime.txt
+RUN python -m pip install --no-cache-dir --requirement requirements/runtime.txt
 
 COPY pyproject.toml README.md LICENSE alembic.ini ./
 COPY terractl ./terractl
@@ -15,7 +22,7 @@ COPY terrawatch ./terrawatch
 COPY services ./services
 COPY database ./database
 
-RUN python -m pip install --no-cache-dir . \
+RUN python -m pip install --no-cache-dir --no-deps . \
     && chown -R app:app /app
 
 USER 10001:10001
