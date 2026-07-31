@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from terractl.lifecycle import ComposeResult, _parse_ps, compose_up
+from terractl.lifecycle import ComposeResult, _parse_ps, assert_environment_green, compose_up
 
 pytestmark = pytest.mark.unit
 
@@ -41,3 +41,33 @@ def test_compose_up_refreshes_environment_before_interpolation(monkeypatch) -> N
 
     assert compose_up() == 0
     assert observed == ["environment", "compose"]
+
+
+def test_green_environment_requires_running_healthy_services(monkeypatch) -> None:
+    services = []
+    for name in (
+        "postgres",
+        "minio",
+        "nats",
+        "ingest-api",
+        "event-api",
+        "analysis-api",
+        "imagery-worker",
+        "correlation-worker",
+    ):
+        services.append(
+            {
+                "Service": name,
+                "State": "running",
+                "Health": "" if name.endswith("worker") else "healthy",
+            }
+        )
+    monkeypatch.setattr(
+        "terractl.lifecycle.run_compose",
+        lambda *arguments, **kwargs: ComposeResult(0, json.dumps(services), ""),
+    )
+    assert_environment_green()
+
+    services[0]["Health"] = "unhealthy"
+    with pytest.raises(RuntimeError, match="not healthy"):
+        assert_environment_green()

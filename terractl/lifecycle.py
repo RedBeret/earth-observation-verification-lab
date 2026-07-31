@@ -19,6 +19,15 @@ class ComposeResult:
     stderr: str
 
 
+def _collect_lifecycle_failure(context: str) -> None:
+    try:
+        from terractl.diagnostics import collect_failure_diagnostics
+
+        print(f"Failure diagnostics: {collect_failure_diagnostics(context)}")
+    except Exception as error:
+        print(f"Diagnostic collection failed: {type(error).__name__}")
+
+
 def _local_values() -> dict[str, str]:
     path = initialize_environment()
     values: dict[str, str] = {}
@@ -79,6 +88,7 @@ def compose_up() -> int:
     print(result.stdout, end="")
     if result.returncode:
         print(result.stderr, end="")
+        _collect_lifecycle_failure("startup")
     return result.returncode
 
 
@@ -101,6 +111,7 @@ def compose_status() -> int:
     result = run_compose("ps", "--all", "--format", "json", timeout=30)
     if result.returncode:
         print(result.stderr, end="")
+        _collect_lifecycle_failure("status")
         return result.returncode
     services = _parse_ps(result.stdout)
     required_running = {
@@ -127,7 +138,40 @@ def compose_status() -> int:
         "passed": not missing,
     }
     print(json.dumps(payload, indent=2))
+    if missing:
+        _collect_lifecycle_failure("readiness")
     return 0 if not missing else 1
+
+
+def assert_environment_green() -> None:
+    result = run_compose("ps", "--all", "--format", "json", timeout=30)
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or "unable to inspect environment")
+    services = {str(item.get("Service")): item for item in _parse_ps(result.stdout)}
+    required_running = {
+        "postgres",
+        "minio",
+        "nats",
+        "ingest-api",
+        "event-api",
+        "analysis-api",
+        "imagery-worker",
+        "correlation-worker",
+    }
+    required_healthy = {
+        "postgres",
+        "minio",
+        "nats",
+        "ingest-api",
+        "event-api",
+        "analysis-api",
+    }
+    for service in required_running:
+        item = services.get(service)
+        if item is None or str(item.get("State", "")).lower() != "running":
+            raise RuntimeError(f"required service is not running: {service}")
+        if service in required_healthy and str(item.get("Health", "")).lower() != "healthy":
+            raise RuntimeError(f"required service is not healthy: {service}")
 
 
 def project_container_ids() -> list[str]:
@@ -182,10 +226,12 @@ def compose_down() -> int:
     print(result.stdout, end="")
     if result.returncode:
         print(result.stderr, end="")
+        _collect_lifecycle_failure("teardown")
         return result.returncode
     survivors = project_container_ids()
     if survivors:
         print(f"Project containers survived teardown: {survivors}")
+        _collect_lifecycle_failure("teardown-survivors")
         return 1
     print(f"Removed {len(identifiers)} verified project containers.")
     return 0
