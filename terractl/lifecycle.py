@@ -66,6 +66,7 @@ def run_compose(
 
 
 def compose_up() -> int:
+    initialize_environment()
     result = run_compose(
         "up",
         "-d",
