@@ -10,11 +10,13 @@ from typing import Annotated
 
 import typer
 
-from terractl.diagnostics import collect_diagnostics
+from terractl.clean_room import clean_room_proof
+from terractl.diagnostics import collect_diagnostics, collect_failure_diagnostics
 from terractl.doctor import print_doctor
 from terractl.environment import ensure_artifact_directories, project_root
-from terractl.faults import FAULT_NAMES
+from terractl.faults import FAULT_NAMES, clear_faults, inject_fault
 from terractl.lifecycle import compose_down, compose_status, compose_up
+from terractl.locking import exclusive_run_lock
 from terractl.procedures import run_procedure
 from terractl.traceability import validate_traceability
 from terractl.validation import validate_repository
@@ -28,24 +30,36 @@ app.add_typer(procedure_app, name="procedure")
 app.add_typer(fault_app, name="fault")
 
 
-def _run(command: list[str]) -> int:
+def _run(command: list[str], failure_context: str = "command") -> int:
     process = subprocess.run(command, cwd=project_root(), check=False)
+    if process.returncode:
+        try:
+            print(f"Failure diagnostics: {collect_failure_diagnostics(failure_context)}")
+        except Exception as error:
+            print(f"Diagnostic collection failed: {type(error).__name__}")
     return process.returncode
 
 
 def _pytest(level: str) -> int:
     ensure_artifact_directories()
     output = project_root() / "artifacts" / "junit" / f"{level}.xml"
-    return _run(
-        [
-            str(Path(__import__("sys").executable)),
-            "-m",
-            "pytest",
-            "-m",
-            level,
-            f"--junitxml={output}",
-        ]
-    )
+    command = [
+        str(Path(__import__("sys").executable)),
+        "-m",
+        "pytest",
+        "-m",
+        level,
+        f"--junitxml={output}",
+    ]
+    if level in {"system", "resilience"}:
+        lock_path = project_root() / "artifacts" / "state" / "system-tests.lock"
+        try:
+            with exclusive_run_lock(lock_path):
+                return _run(command, failure_context=f"test-{level}")
+        except RuntimeError:
+            print("Another system or resilience run holds the project lock.")
+            return 2
+    return _run(command, failure_context=f"test-{level}")
 
 
 @app.command()
@@ -90,7 +104,8 @@ def seed() -> None:
             "data.generators.generate_expected_results",
             "--output",
             "data",
-        ]
+        ],
+        failure_context="seed",
     )
     raise typer.Exit(code)
 
@@ -112,8 +127,11 @@ def down() -> None:
 
 @app.command(name="clean-room")
 def clean_room() -> None:
-    print("Clean-room isolation proof is enabled in Stage 5.")
-    raise typer.Exit(2)
+    try:
+        print(clean_room_proof(create_verification_sentinel=True))
+    except Exception as error:
+        print(f"Clean-room proof failed: {type(error).__name__}")
+        raise typer.Exit(1) from error
 
 
 @app.command()
@@ -205,8 +223,15 @@ def fault_inject(name: str, apply: bool = typer.Option(False, "--apply")) -> Non
     if not apply:
         print(f"Refusing to inject {name} without --apply.")
         raise typer.Exit(2)
-    print(f"Fault handler for {name} is enabled in Stage 5.")
-    raise typer.Exit(2)
+    try:
+        print(json.dumps(inject_fault(name), indent=2))
+    except Exception as error:
+        print(f"Fault injection failed: {type(error).__name__}")
+        try:
+            print(f"Failure diagnostics: {collect_failure_diagnostics(f'fault-{name}')}")
+        except Exception as diagnostic_error:
+            print(f"Diagnostic collection failed: {type(diagnostic_error).__name__}")
+        raise typer.Exit(1) from error
 
 
 @fault_app.command("clear")
@@ -214,8 +239,15 @@ def fault_clear(apply: bool = typer.Option(False, "--apply")) -> None:
     if not apply:
         print("Refusing to clear faults without --apply.")
         raise typer.Exit(2)
-    print("Fault clearing is enabled in Stage 5.")
-    raise typer.Exit(2)
+    try:
+        print(json.dumps(clear_faults(), indent=2))
+    except Exception as error:
+        print(f"Fault clearing failed: {type(error).__name__}")
+        try:
+            print(f"Failure diagnostics: {collect_failure_diagnostics('fault-clear')}")
+        except Exception as diagnostic_error:
+            print(f"Diagnostic collection failed: {type(diagnostic_error).__name__}")
+        raise typer.Exit(1) from error
 
 
 if __name__ == "__main__":
