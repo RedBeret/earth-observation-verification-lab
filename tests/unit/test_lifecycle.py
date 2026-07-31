@@ -1,8 +1,15 @@
 import json
+from io import BytesIO, TextIOWrapper
 
 import pytest
 
-from terractl.lifecycle import ComposeResult, _parse_ps, assert_environment_green, compose_up
+from terractl.lifecycle import (
+    ComposeResult,
+    _parse_ps,
+    _write_console,
+    assert_environment_green,
+    compose_up,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -24,6 +31,14 @@ def test_parse_compose_ps_json_lines() -> None:
         {"Service": "postgres", "State": "running"},
         {"Service": "minio", "State": "running"},
     ]
+
+
+def test_console_output_replaces_unrepresentable_progress_symbols() -> None:
+    buffer = BytesIO()
+    stream = TextIOWrapper(buffer, encoding="cp1252")
+    _write_console("built ✓\n", stream)
+    stream.flush()
+    assert buffer.getvalue().decode("cp1252").splitlines() == ["built ?"]
 
 
 def test_compose_up_refreshes_environment_before_interpolation(monkeypatch) -> None:

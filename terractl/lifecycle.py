@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TextIO, cast
 
 from terractl.environment import initialize_environment, project_root
 from terractl.safety import assert_project_identity
@@ -17,6 +18,13 @@ class ComposeResult:
     returncode: int
     stdout: str
     stderr: str
+
+
+def _write_console(value: str, stream: TextIO | None = None) -> None:
+    target = stream or sys.stdout
+    encoding = target.encoding or "utf-8"
+    safe_value = value.encode(encoding, errors="replace").decode(encoding)
+    target.write(safe_value)
 
 
 def _collect_lifecycle_failure(context: str) -> None:
@@ -85,9 +93,9 @@ def compose_up() -> int:
         "180",
         timeout=600,
     )
-    print(result.stdout, end="")
+    _write_console(result.stdout)
     if result.returncode:
-        print(result.stderr, end="")
+        _write_console(result.stderr, sys.stderr)
         _collect_lifecycle_failure("startup")
     return result.returncode
 
@@ -110,7 +118,7 @@ def _parse_ps(output: str) -> list[dict[str, Any]]:
 def compose_status() -> int:
     result = run_compose("ps", "--all", "--format", "json", timeout=30)
     if result.returncode:
-        print(result.stderr, end="")
+        _write_console(result.stderr, sys.stderr)
         _collect_lifecycle_failure("status")
         return result.returncode
     services = _parse_ps(result.stdout)
@@ -223,9 +231,9 @@ def compose_down() -> int:
         print("No labeled project containers exist; nothing to remove.")
         return 0
     result = run_compose("down", "--volumes", "--remove-orphans", "--timeout", "30", timeout=120)
-    print(result.stdout, end="")
+    _write_console(result.stdout)
     if result.returncode:
-        print(result.stderr, end="")
+        _write_console(result.stderr, sys.stderr)
         _collect_lifecycle_failure("teardown")
         return result.returncode
     survivors = project_container_ids()
