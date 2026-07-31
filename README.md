@@ -21,7 +21,7 @@ services.
 - Optional public imagery may be discussed, but it is never required by tests or CI.
 - Generated evidence is redacted before it is written.
 
-## Planned entrypoint
+## Entrypoint
 
 All local and CI workflows use:
 
@@ -29,5 +29,17 @@ All local and CI workflows use:
 ./scripts/terra.sh <command>
 ```
 
+Jenkins, GitHub Actions, and GitLab call the same entrypoints in the same order, so a
+green pipeline and a green local run mean the same thing.
+
+## Documentation
+
+- [Operator guide](docs/OPERATIONS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Test plan](docs/TEST_PLAN.md)
+- [Interface control document](docs/INTERFACE_CONTROL.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+
 See [PROJECT_BOUNDARY.md](PROJECT_BOUNDARY.md) and
-[DATA_PROVENANCE.md](DATA_PROVENANCE.md) for the enforced project boundary.
+[DATA_PROVENANCE.md](DATA_PROVENANCE.md) for the enforced project boundary, and
+[SECURITY.md](SECURITY.md) for the scanner rules.
