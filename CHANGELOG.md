@@ -18,3 +18,7 @@ All notable changes to this project are documented here.
   transactional outbox delivery, durable worker processing, STAC/PostGIS cataloging,
   idempotent replay, conflict handling, structured diagnostics, and executable
   `TP-ING-002` coverage.
+- Verified telemetry ingestion, canonical idempotency, deterministic PostGIS
+  correlation, event-level analysis, spatial/time search, pagination, exact revision
+  provenance, common error envelopes, and executable `TP-API-004`/`TP-SYS-001`
+  coverage.
