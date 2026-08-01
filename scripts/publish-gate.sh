@@ -11,6 +11,7 @@ cd "$ROOT"
 
 REMOTE_NAME="${REMOTE_NAME:-origin}"
 REPOSITORY="${REPOSITORY:-RedBeret/earth-observation-verification-lab}"
+VISIBILITY="${VISIBILITY:-public}"
 PUSH="no"
 if [[ "${1:-}" == "--push" ]]; then
   PUSH="yes"
@@ -49,10 +50,16 @@ if ! command -v gh >/dev/null 2>&1; then
 fi
 
 if ! git remote get-url "$REMOTE_NAME" >/dev/null 2>&1; then
-  gh repo create "$REPOSITORY" --public --source=. --remote="$REMOTE_NAME" --push
-else
-  git push "$REMOTE_NAME" main
+  # Create the remote but do not let gh push. On a non-bare repository --push publishes
+  # only the currently checked out branch, which is a stage branch. That would leave main
+  # unpublished and make a stage branch the default, so every stage pull request would
+  # have no base to open against.
+  gh repo create "$REPOSITORY" "--${VISIBILITY}" --source=. --remote="$REMOTE_NAME"
 fi
+
+# main goes first so it becomes the default branch and every stage pull request has a base.
+git push --set-upstream "$REMOTE_NAME" main
+gh repo edit "$REPOSITORY" --default-branch main
 
 for branch in \
   codex/stage-2-infrastructure \

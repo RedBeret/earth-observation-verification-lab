@@ -39,8 +39,20 @@ All notable changes to this project are documented here.
   with tests that verify every documented command, path, and link.
 - Clean-checkout verification and publish-gate scripts.
 
+### Security
+
+- Upgraded `fastapi` to 0.141.1, `python-multipart` to 0.0.31, and `filelock` to 3.20.3,
+  which clears fourteen advisories that the dependency audit reported against the pinned
+  set. Six of them were in `starlette`, reachable only by moving `fastapi` off its
+  `starlette<0.48.0` ceiling, so the framework bump was the fix rather than a bystander.
+
 ### Fixed
 
+- The publish gate never pushed `main` when it created the repository. `gh repo create
+  --push` publishes only the checked-out branch, which is a stage branch, so `main` would
+  have been absent and a stage branch would have become the default. Every stage pull
+  request would then have had no base to open against. The gate now creates the remote
+  without pushing, pushes `main` first, and sets it as the default branch.
 - Clearing a pause fault could fail to resolve the container it had just paused, because
   the service lookup did not list paused containers. The lookup now considers every
   container, filters to the single live candidate, and refuses an ambiguous result. Fault
