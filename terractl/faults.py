@@ -62,11 +62,35 @@ def _docker(*arguments: str, timeout: int = 30) -> subprocess.CompletedProcess[s
     )
 
 
+LIVE_CONTAINER_STATES = frozenset({"running", "paused", "restarting"})
+
+
+def _container_state(identifier: str) -> str:
+    result = _docker("inspect", identifier, "--format", "{{.State.Status}}")
+    if result.returncode:
+        raise RuntimeError(f"unable to inspect container: {identifier}")
+    return result.stdout.strip().lower()
+
+
 def _service_container_id(service: str) -> str:
-    result = run_compose("ps", "-q", service, timeout=30)
-    identifier = result.stdout.strip()
-    if result.returncode or not identifier:
-        raise RuntimeError(f"unable to resolve running service: {service}")
+    """Resolve the one live container for a service, including a paused one.
+
+    The lookup asks for every container so that a paused target still resolves. Without
+    that, clearing a pause fault could not find the container it had just paused, and the
+    guarded recovery path would be unusable exactly when it is needed.
+    """
+    result = run_compose("ps", "-q", "--all", service, timeout=30)
+    if result.returncode:
+        raise RuntimeError(f"unable to resolve service: {service}")
+    candidates = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    live = [
+        identifier
+        for identifier in candidates
+        if _container_state(identifier) in LIVE_CONTAINER_STATES
+    ]
+    if len(live) != 1:
+        raise RuntimeError(f"expected exactly one live container for {service}, found {len(live)}")
+    identifier = live[0]
     inspect = _docker("inspect", identifier, "--format", "{{json .Config.Labels}}")
     if inspect.returncode:
         raise RuntimeError(f"unable to inspect service: {service}")
@@ -129,10 +153,15 @@ def inject_fault(name: str) -> dict[str, Any]:
     if name in PAUSE_FAULTS:
         service = PAUSE_FAULTS[name]
         identifier = _service_container_id(service)
+        # Record the intent before acting. If the process dies mid-fault, the operator
+        # still has a record of what was about to change.
+        state.update(action="pause", service=service, container_id=identifier)
+        _write_state(state)
         result = _docker("pause", identifier)
         if result.returncode:
+            fault_state_path().unlink(missing_ok=True)
             raise RuntimeError(result.stderr.strip() or f"unable to pause {service}")
-        state.update(active=True, action="pause", service=service, container_id=identifier)
+        state["active"] = True
         _write_state(state)
     elif name == "worker-restart":
         identifier = _service_container_id("correlation-worker")
@@ -143,6 +172,8 @@ def inject_fault(name: str) -> dict[str, Any]:
     elif name == "malformed-raster":
         object_name = f"faults/malformed-{uuid4()}.tif"
         payload = b"synthetic malformed raster fault\n"
+        state.update(action="object-create", object_name=object_name)
+        _write_state(state)
         minio_client().put_object(
             get_settings().minio_bucket,
             object_name,
@@ -150,7 +181,7 @@ def inject_fault(name: str) -> dict[str, Any]:
             len(payload),
             content_type="image/tiff",
         )
-        state.update(active=True, action="object-create", object_name=object_name)
+        state["active"] = True
         _write_state(state)
     elif name == "stale-catalog-metadata":
         with session_scope() as session:
@@ -162,14 +193,17 @@ def inject_fault(name: str) -> dict[str, Any]:
             ).scalar_one_or_none()
             if scene is None or scene.width is None:
                 raise RuntimeError("stale-catalog-metadata requires an accepted scene")
+            scene_id = scene.scene_id
             original_width = scene.width
-            scene.width = original_width + 1
-            state.update(
-                active=True,
-                action="metadata-change",
-                scene_id=scene.scene_id,
-                original_width=original_width,
-            )
+        state.update(action="metadata-change", scene_id=scene_id, original_width=original_width)
+        _write_state(state)
+        with session_scope() as session:
+            target = session.get(Scene, scene_id)
+            if target is None:
+                fault_state_path().unlink(missing_ok=True)
+                raise RuntimeError("scene disappeared before the fault could be applied")
+            target.width = original_width + 1
+        state["active"] = True
         _write_state(state)
     elif name == "duplicate-event":
         event_id = asyncio.run(_publish_duplicate_event())
@@ -189,9 +223,12 @@ def clear_faults() -> dict[str, Any]:
         current_identifier = _service_container_id(service)
         if current_identifier != state.get("container_id"):
             raise RuntimeError("fault target container identity changed")
-        result = _docker("unpause", current_identifier)
-        if result.returncode:
-            raise RuntimeError(result.stderr.strip() or f"unable to unpause {service}")
+        # The container may not be paused if the process died between recording the
+        # intent and applying it. Clearing has to be safe to run either way.
+        if _container_state(current_identifier) == "paused":
+            result = _docker("unpause", current_identifier)
+            if result.returncode:
+                raise RuntimeError(result.stderr.strip() or f"unable to unpause {service}")
     elif action == "object-create":
         minio_client().remove_object(
             get_settings().minio_bucket,
