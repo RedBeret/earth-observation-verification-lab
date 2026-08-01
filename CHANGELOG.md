@@ -41,6 +41,11 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Clearing a pause fault could fail to resolve the container it had just paused, because
+  the service lookup did not list paused containers. The lookup now considers every
+  container, filters to the single live candidate, and refuses an ambiguous result. Fault
+  injection records its intent before acting, and clearing only unpauses a container that
+  is actually paused.
 - Test collection failed when two test modules shared a basename. The suite now uses the
   `importlib` import mode.
 - Compose output containing characters outside the console code page no longer breaks
