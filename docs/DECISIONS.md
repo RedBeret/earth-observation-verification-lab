@@ -78,6 +78,9 @@ than in a renderer, so no output format can disagree with it.
 **Cost.** Running one test level and then generating evidence produces a mostly failing
 report. That is correct, and the operator guide says so.
 
+**Refined by.** Decision 11, which separates a missing observation from an executed
+failure at the moment of release. Nothing recorded in the evidence model changes.
+
 ## 6. Thresholds live in one versioned file
 
 **Context.** Performance limits were about to exist twice: once inside the k6 script and
@@ -154,3 +157,29 @@ the rename that would otherwise waste someone's afternoon.
 
 **Cost.** Documenting a path that does not exist yet requires a placeholder the checker
 recognises.
+
+## 11. Publication is blocked by defects, not by silence
+
+**Context.** Decision 5 makes any requirement whose test did not run count as a failure.
+The publish gate then refused to publish while any requirement failed. Together those two
+rules meant the repository could never be published until someone had run the full Docker
+suite on a live host, because thirty of forty requirements are only observable there. The
+gate's own comment asked for something weaker than its behaviour: that the evidence
+package exist and reconcile.
+
+**Decision.** The publish gate blocks on any check that ran and failed, and on any
+evidence package that fails to reconcile. It does not block on a requirement that was
+never observed. It prints the observed count instead, and the README states the same
+number.
+
+**Why.** An executed failure is a defect and is information. A missing observation is an
+absence of information. Treating them identically at the point of release is what made the
+gate unusable, and an unusable gate gets bypassed, which is worse than a gate that states
+its own limits. `--allow-unobserved` waives only the second category, and the split is
+enforced in `classify_failures` and asserted by tests rather than left to the caller.
+
+**Cost.** A reader has to take the observed count seriously rather than reading a green
+gate as full verification. That count is on the front page of the README for exactly that
+reason. Anyone wanting the stricter rule still has it: `./scripts/terra.sh evidence`
+without the flag fails while anything is unobserved, and that is what every CI runner
+executes.

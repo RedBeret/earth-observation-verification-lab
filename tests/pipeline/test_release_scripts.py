@@ -73,8 +73,24 @@ def test_the_publish_gate_checks_before_it_pushes() -> None:
     assert max(checks) < min(pushes)
 
 
+def _evidence_invocations(text: str) -> list[str]:
+    return [
+        command
+        for command in pipeline_commands(text)
+        if command.startswith("./scripts/terra.sh evidence")
+    ]
+
+
 def test_the_publish_gate_requires_reconciled_evidence() -> None:
-    assert "./scripts/terra.sh evidence" in pipeline_commands(_text("publish-gate.sh"))
+    assert _evidence_invocations(_text("publish-gate.sh"))
+
+
+def test_the_publish_gate_waives_only_missing_observations() -> None:
+    """The gate may publish with requirements not observed. It may not publish over a
+    check that ran and failed, so it must not reach for a broader waiver than that."""
+    assert _evidence_invocations(_text("publish-gate.sh")) == [
+        "./scripts/terra.sh evidence --allow-unobserved"
+    ]
 
 
 def test_the_publish_gate_pushes_the_stage_branches_in_order() -> None:

@@ -8,6 +8,7 @@ import json
 import platform
 import sys
 from pathlib import Path
+from typing import Any
 from xml.etree import ElementTree
 
 from terractl.environment import artifacts_root, compose_project_name, repository_revision
@@ -188,3 +189,21 @@ def reconcile_evidence(package: Path) -> dict[str, int]:
         raise ValueError("evidence manifest totals do not agree")
 
     return {"total": json_total, "failed": json_failed, "passed": json_total - json_failed}
+
+
+def classify_failures(records: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
+    """Split records into checks that ran and failed, and checks that never ran.
+
+    The two are not interchangeable. A check that executed and failed is a defect and must
+    always stop a release. A check that never executed is an absence of information, which
+    the project reports as `not observed` and may choose to publish alongside.
+    """
+    executed_failures = sorted(
+        record["check_id"]
+        for record in records
+        if record["observation_status"] != "not observed" and not record["passed"]
+    )
+    unobserved = sorted(
+        record["check_id"] for record in records if record["observation_status"] == "not observed"
+    )
+    return executed_failures, unobserved

@@ -29,6 +29,7 @@ whatever it reports before continuing.
 | `./scripts/terra.sh down` | Remove only verified project containers |
 | `./scripts/terra.sh diagnostics` | Write a redacted diagnostic bundle |
 | `./scripts/terra.sh evidence` | Render and reconcile the evidence package |
+| `./scripts/terra.sh evidence --allow-unobserved` | Same, but exit zero when the only failures are requirements that were never observed. A check that ran and failed still exits non-zero. Used by the publish gate |
 | `./scripts/terra.sh clean-room` | Prove teardown touches nothing else |
 
 ## Test levels

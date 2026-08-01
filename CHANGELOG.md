@@ -46,6 +46,16 @@ All notable changes to this project are documented here.
   set. Six of them were in `starlette`, reachable only by moving `fastapi` off its
   `starlette<0.48.0` ceiling, so the framework bump was the fix rather than a bystander.
 
+### Changed
+
+- The publish gate now blocks on a check that ran and failed, and reports rather than
+  blocks on a requirement that was never observed. `terra.sh evidence` gained
+  `--allow-unobserved` for exactly that distinction, `classify_failures` enforces the
+  split, and the default command is unchanged, so every CI runner still fails while
+  anything is unobserved. Recorded as decision 11.
+- The documentation command checker no longer reads an option flag as a subcommand, which
+  previously made any documented command with a flag look invented.
+
 ### Fixed
 
 - The publish gate never pushed `main` when it created the repository. `gh repo create

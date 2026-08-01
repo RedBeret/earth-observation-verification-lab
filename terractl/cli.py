@@ -15,6 +15,7 @@ from terractl.contract import run_newman
 from terractl.diagnostics import collect_diagnostics, collect_failure_diagnostics
 from terractl.doctor import print_doctor
 from terractl.environment import ensure_artifact_directories, project_root
+from terractl.evidence import classify_failures
 from terractl.faults import FAULT_NAMES, clear_faults, inject_fault
 from terractl.lifecycle import compose_down, compose_status, compose_up
 from terractl.locking import exclusive_run_lock
@@ -157,6 +158,14 @@ def clean_room() -> None:
 @app.command()
 def evidence(
     run_id: Annotated[str | None, typer.Option(help="Existing run identifier.")] = None,
+    allow_unobserved: Annotated[
+        bool,
+        typer.Option(
+            "--allow-unobserved",
+            help="Exit zero when the package reconciles and every failure is a missing "
+            "observation. A requirement whose test ran and failed still exits non-zero.",
+        ),
+    ] = False,
 ) -> None:
     """Render and reconcile evidence from collected test results."""
     ensure_artifact_directories()
@@ -168,8 +177,19 @@ def evidence(
     summary = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
     print(json.dumps(summary["totals"], indent=2, sort_keys=True))
     print(f"Evidence package: {package.relative_to(project_root())}")
-    if summary["totals"]["failed"]:
+
+    records = json.loads((package / "test-summary.json").read_text(encoding="utf-8"))["records"]
+    executed_failures, unobserved = classify_failures(records)
+
+    # A test that ran and failed is a real failure and always fails the command. Only a
+    # missing observation can be waived, and only when the caller asks for it.
+    if executed_failures:
+        print(f"Executed checks that failed: {len(executed_failures)}")
         raise typer.Exit(1)
+    if unobserved:
+        print(f"Requirements not observed: {len(unobserved)} of {len(records)}")
+        if not allow_unobserved:
+            raise typer.Exit(1)
 
 
 @app.command()

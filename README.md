@@ -149,7 +149,12 @@ implemented but have not yet been executed end to end on a Docker host, so they 
 reported as not observed rather than passing. `./scripts/terra.sh evidence` will say the
 same thing about any requirement whose test did not run.
 
-That distinction is the point of the project, so it is applied to the project itself.
+Ten of the forty requirements are observed on the published commit. The other thirty are
+not observed, and none of them are passing. No check that has actually run is failing.
+
+That distinction is the point of the project, so it is applied to the project itself. The
+publish gate blocks on a check that ran and failed, and reports rather than blocks on one
+that never ran; `docs/DECISIONS.md` records why.
 
 ## Scope and boundary
 

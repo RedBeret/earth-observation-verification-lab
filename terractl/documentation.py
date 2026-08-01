@@ -74,8 +74,9 @@ def referenced_commands(text: str) -> set[str]:
         if parts[0].endswith("bootstrap.sh"):
             found.add("./scripts/bootstrap.sh")
             continue
-        # Keep the command and at most one subcommand; drop arguments such as TP ids.
-        trimmed = [part for part in parts[1:] if part.islower()]
+        # Keep the command and at most one subcommand; drop arguments such as TP ids and
+        # option flags. A flag documents how a command runs, not which command it is.
+        trimmed = [part for part in parts[1:] if part.islower() and not part.startswith("-")]
         found.add(" ".join(["./scripts/terra.sh", *trimmed[:2]]))
     return found
 

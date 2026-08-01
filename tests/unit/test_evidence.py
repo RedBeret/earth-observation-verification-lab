@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from terractl.evidence import reconcile_evidence, render_evidence
+from terractl.evidence import classify_failures, reconcile_evidence, render_evidence
 from terractl.models import VerificationRecord, VerificationSummary
 
 pytestmark = pytest.mark.unit
@@ -75,3 +75,37 @@ def test_evidence_redacts_credential_shapes(tmp_path: Path, monkeypatch) -> None
     )
     combined = "\n".join(path.read_text(errors="ignore") for path in package.iterdir())
     assert "example-sensitive-value" not in combined
+
+
+def _payload(*, check_id: str, status: str, passed: bool) -> dict[str, object]:
+    return {"check_id": check_id, "observation_status": status, "passed": passed}
+
+
+def test_classify_failures_separates_absence_from_defect() -> None:
+    executed_failures, unobserved = classify_failures(
+        [
+            _payload(check_id="a.passed", status="observed", passed=True),
+            _payload(check_id="b.failed", status="observed", passed=False),
+            _payload(check_id="c.missing", status="not observed", passed=False),
+        ]
+    )
+    assert executed_failures == ["b.failed"]
+    assert unobserved == ["c.missing"]
+
+
+def test_classify_failures_never_waives_an_executed_failure() -> None:
+    """A check that ran and failed must stay in the blocking bucket, so that waiving
+    missing observations can never waive a real defect along with them."""
+    executed_failures, unobserved = classify_failures(
+        [_payload(check_id="b.failed", status="observed", passed=False)]
+    )
+    assert executed_failures == ["b.failed"]
+    assert unobserved == []
+
+
+def test_classify_failures_on_a_fully_observed_run_is_empty() -> None:
+    executed_failures, unobserved = classify_failures(
+        [_payload(check_id="a.passed", status="observed", passed=True)]
+    )
+    assert executed_failures == []
+    assert unobserved == []

@@ -90,3 +90,12 @@ def test_routes_and_bare_filenames_are_not_treated_as_repository_paths() -> None
 
 def test_generated_output_paths_are_not_required_to_exist() -> None:
     assert missing_paths("Newman writes `artifacts/reports/postman.json` on every run.") == []
+
+
+def test_option_flags_are_not_treated_as_subcommands() -> None:
+    """A flag says how a command runs, not which command it is, so it must not turn a
+    real command into an unknown one."""
+    assert referenced_commands("`./scripts/terra.sh evidence --allow-unobserved`") == {
+        "./scripts/terra.sh evidence"
+    }
+    assert unknown_commands("`./scripts/terra.sh evidence --allow-unobserved`") == []
