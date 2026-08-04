@@ -37,6 +37,21 @@ LATENCY = Histogram(
 AsyncProbe = Callable[[], Awaitable[tuple[bool, str]]]
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
+# A readiness probe has to answer. A frozen dependency is the case that breaks that: the
+# container's kernel keeps acknowledging TCP while nothing in it ever replies, so
+# connect_timeout has already been satisfied and tcp_user_timeout never fires. A query
+# issued on a pooled connection then waits forever, and an endpoint that never returns
+# cannot report anything at all. Every dependency check is bounded so that a dependency
+# which stops answering reads as not ready rather than as silence.
+READINESS_CHECK_TIMEOUT_SECONDS = 5.0
+
+
+async def _bounded_check(probe: Awaitable[tuple[bool, str]]) -> tuple[bool, str]:
+    try:
+        return await asyncio.wait_for(probe, timeout=READINESS_CHECK_TIMEOUT_SECONDS)
+    except TimeoutError:
+        return False, "TimeoutError"
+
 
 def normalized_request_id(candidate: str | None) -> str:
     if candidate is not None and REQUEST_ID_PATTERN.fullmatch(candidate):
@@ -146,13 +161,13 @@ def create_app(service_name: str, dependencies: tuple[str, ...]) -> FastAPI:
     async def readiness() -> Response:
         checks: dict[str, dict[str, str | bool]] = {}
         if "postgres" in dependencies:
-            ok, detail = await asyncio.to_thread(database_ready)
+            ok, detail = await _bounded_check(asyncio.to_thread(database_ready))
             checks["postgres"] = {"ready": ok, "detail": detail}
         if "minio" in dependencies:
-            ok, detail = await asyncio.to_thread(storage_ready)
+            ok, detail = await _bounded_check(asyncio.to_thread(storage_ready))
             checks["minio"] = {"ready": ok, "detail": detail}
         if "nats" in dependencies:
-            ok, detail = await messaging_ready()
+            ok, detail = await _bounded_check(messaging_ready())
             checks["nats"] = {"ready": ok, "detail": detail}
         ready = all(bool(check["ready"]) for check in checks.values())
         return JSONResponse(

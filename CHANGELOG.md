@@ -58,6 +58,12 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Readiness could hang instead of reporting a dependency outage. A frozen container keeps
+  acknowledging TCP at the kernel level while nothing inside it replies, so
+  `connect_timeout` is already satisfied and `tcp_user_timeout` never fires, and a query
+  issued on a pooled connection waits indefinitely. `/readyz` therefore never answered
+  during a Postgres outage rather than answering 503. Every dependency check is now
+  bounded, and a check that does not answer in time reads as not ready.
 - Fault injection refused to run whenever any service was paused, which made the
   resilience drills impossible to execute. A drill pauses a worker to queue messages and
   then injects a fault, so the paused container is the expected state rather than a broken
