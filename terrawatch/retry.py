@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+import asyncio
 import random
+from collections.abc import Awaitable
+
+# A frozen dependency keeps acknowledging TCP while nothing inside it ever replies, so a
+# call against it never returns. A worker that waits forever never naks, never retries,
+# and never dead letters. It stops consuming while still looking alive, which is worse
+# than crashing. Bounding the work turns that silence into an ordinary failed attempt,
+# which the retry path already knows how to handle.
+PROCESSING_TIMEOUT_SECONDS = 15.0
+
+
+async def bounded[T](work: Awaitable[T], *, timeout: float | None = None) -> T:
+    """Await dependency work, giving up rather than hanging forever."""
+    return await asyncio.wait_for(work, timeout=timeout or PROCESSING_TIMEOUT_SECONDS)
 
 
 def backoff_seconds(

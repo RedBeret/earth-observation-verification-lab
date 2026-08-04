@@ -32,7 +32,7 @@ from terrawatch.database import (
     session_scope,
 )
 from terrawatch.messaging import connect
-from terrawatch.retry import backoff_seconds, retry_exhausted
+from terrawatch.retry import backoff_seconds, bounded, retry_exhausted
 from terrawatch.validation import within_temporal_window
 
 LOGGER = structlog.get_logger(service="correlation-worker")
@@ -205,7 +205,7 @@ async def _process_message(message: Msg) -> None:
     event_id = str(envelope["payload"]["event_id"])
     attempt = message.metadata.num_delivered if message.metadata else 1
     try:
-        result = await asyncio.to_thread(evaluate_event, event_id)
+        result = await bounded(asyncio.to_thread(evaluate_event, event_id))
         await asyncio.to_thread(_record_attempt, message_id, attempt, "passed")
         await message.ack()
         LOGGER.info(

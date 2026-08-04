@@ -30,7 +30,7 @@ from terrawatch.database import (
 from terrawatch.messaging import connect
 from terrawatch.models import SceneMetadata
 from terrawatch.raster import RasterMetadata, inspect_raster, stac_item
-from terrawatch.retry import backoff_seconds, retry_exhausted
+from terrawatch.retry import backoff_seconds, bounded, retry_exhausted
 from terrawatch.storage import minio_client
 
 LOGGER = structlog.get_logger(service="imagery-worker")
@@ -143,27 +143,33 @@ async def _process_message(message: Msg) -> None:
     attempt = message.metadata.num_delivered if message.metadata else 1
     path: Path | None = None
     try:
-        declared, expected_digest, object_name = await asyncio.to_thread(_scene_metadata, scene_id)
+        declared, expected_digest, object_name = await bounded(
+            asyncio.to_thread(_scene_metadata, scene_id)
+        )
         with tempfile.NamedTemporaryFile(
             prefix="terrawatch-worker-", suffix=".tif", delete=False
         ) as temp:
             path = Path(temp.name)
-        await asyncio.to_thread(
-            minio_client().fget_object,
-            get_settings().minio_bucket,
-            object_name,
-            str(path),
+        await bounded(
+            asyncio.to_thread(
+                minio_client().fget_object,
+                get_settings().minio_bucket,
+                object_name,
+                str(path),
+            )
         )
         actual_digest = sha256(path.read_bytes()).hexdigest()
         if actual_digest != expected_digest:
             raise ValueError("stored object digest does not match the scene record")
         raster_metadata = await asyncio.to_thread(inspect_raster, path, declared)
-        await asyncio.to_thread(
-            _complete_scene,
-            scene_id,
-            expected_digest,
-            object_name,
-            raster_metadata,
+        await bounded(
+            asyncio.to_thread(
+                _complete_scene,
+                scene_id,
+                expected_digest,
+                object_name,
+                raster_metadata,
+            )
         )
         await asyncio.to_thread(_record_attempt, message_id, attempt, "passed")
         await message.ack()

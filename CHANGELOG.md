@@ -58,6 +58,13 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Both workers could stop consuming instead of retrying. Message handling called into the
+  database and object store without a time bound, so a frozen dependency left the handler
+  waiting inside its `try` block forever. The `except` branch that records the attempt,
+  naks the message, and eventually dead letters it was never reached, so a worker held its
+  message and went quiet while still reporting itself alive. Dependency work in both
+  workers is now bounded, which turns a wedged dependency into an ordinary failed attempt
+  that the existing retry and dead letter path already handles.
 - Readiness could hang instead of reporting a dependency outage. A frozen container keeps
   acknowledging TCP at the kernel level while nothing inside it replies, so
   `connect_timeout` is already satisfied and `tcp_user_timeout` never fires, and a query
