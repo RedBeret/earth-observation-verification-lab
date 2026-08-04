@@ -107,3 +107,72 @@ def test_an_unusable_startup_timeout_is_refused(monkeypatch, value: str) -> None
     monkeypatch.setenv("TERRA_UP_TIMEOUT_SECONDS", value)
     with pytest.raises(RuntimeError):
         up_timeout_seconds()
+
+
+def _service_payload(paused: str | None = None) -> list[dict[str, str]]:
+    services = []
+    for name in (
+        "postgres",
+        "minio",
+        "nats",
+        "ingest-api",
+        "event-api",
+        "analysis-api",
+        "imagery-worker",
+        "correlation-worker",
+    ):
+        state = "paused" if name == paused else "running"
+        services.append(
+            {
+                "Service": name,
+                "State": state,
+                # A paused container reports no useful health, which is the point.
+                "Health": "" if name.endswith("worker") or state == "paused" else "healthy",
+            }
+        )
+    return services
+
+
+def test_a_paused_service_is_not_green_by_default(monkeypatch) -> None:
+    payload = _service_payload(paused="correlation-worker")
+    monkeypatch.setattr(
+        "terractl.lifecycle.run_compose",
+        lambda *arguments, **kwargs: ComposeResult(0, json.dumps(payload), ""),
+    )
+    with pytest.raises(RuntimeError, match="not running"):
+        assert_environment_green()
+
+
+def test_fault_injection_tolerates_a_deliberately_paused_service(monkeypatch) -> None:
+    """A resilience drill pauses a worker to queue messages and then injects a fault. If
+    the guard counted that pause as a missing service the drill could never run."""
+    payload = _service_payload(paused="correlation-worker")
+    monkeypatch.setattr(
+        "terractl.lifecycle.run_compose",
+        lambda *arguments, **kwargs: ComposeResult(0, json.dumps(payload), ""),
+    )
+    assert_environment_green(allow_paused=True)
+
+
+def test_a_stopped_service_is_never_green(monkeypatch) -> None:
+    payload = _service_payload()
+    payload[0]["State"] = "exited"
+    monkeypatch.setattr(
+        "terractl.lifecycle.run_compose",
+        lambda *arguments, **kwargs: ComposeResult(0, json.dumps(payload), ""),
+    )
+    for allow in (False, True):
+        with pytest.raises(RuntimeError, match="not running"):
+            assert_environment_green(allow_paused=allow)
+
+
+def test_an_unhealthy_service_is_never_green(monkeypatch) -> None:
+    payload = _service_payload()
+    payload[0]["Health"] = "unhealthy"
+    monkeypatch.setattr(
+        "terractl.lifecycle.run_compose",
+        lambda *arguments, **kwargs: ComposeResult(0, json.dumps(payload), ""),
+    )
+    for allow in (False, True):
+        with pytest.raises(RuntimeError, match="not healthy"):
+            assert_environment_green(allow_paused=allow)

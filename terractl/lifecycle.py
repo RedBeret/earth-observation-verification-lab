@@ -172,7 +172,15 @@ def compose_status() -> int:
     return 0 if not missing else 1
 
 
-def assert_environment_green() -> None:
+def assert_environment_green(*, allow_paused: bool = False) -> None:
+    """Refuse to proceed unless the required services are up.
+
+    `allow_paused` exists for one caller. Fault injection is the operation whose entire
+    purpose is to run against an environment that is being deliberately perturbed, and a
+    resilience drill pauses a service before injecting a fault. Treating a paused
+    container as absent made those drills impossible to run. Every other caller wants a
+    pristine environment and keeps the strict meaning.
+    """
     result = run_compose("ps", "--all", "--format", "json", timeout=30)
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or "unable to inspect environment")
@@ -195,10 +203,16 @@ def assert_environment_green() -> None:
         "event-api",
         "analysis-api",
     }
+    live_states = {"running", "paused"} if allow_paused else {"running"}
     for service in required_running:
         item = services.get(service)
-        if item is None or str(item.get("State", "")).lower() != "running":
+        state = str(item.get("State", "")).lower() if item is not None else ""
+        if item is None or state not in live_states:
             raise RuntimeError(f"required service is not running: {service}")
+        if state == "paused":
+            # A suspended container cannot report healthy and its health says nothing
+            # useful while it is paused, so the health requirement does not apply to it.
+            continue
         if service in required_healthy and str(item.get("Health", "")).lower() != "healthy":
             raise RuntimeError(f"required service is not healthy: {service}")
 

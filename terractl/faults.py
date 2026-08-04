@@ -142,7 +142,9 @@ def inject_fault(name: str) -> dict[str, Any]:
         raise ValueError("unknown fault")
     if load_fault_state() is not None:
         raise RuntimeError("another controlled fault is already active")
-    assert_environment_green()
+    # A resilience drill pauses a service before injecting a fault, so a paused container
+    # here is the expected state rather than a broken environment.
+    assert_environment_green(allow_paused=True)
     now = datetime.now(UTC).isoformat()
     state: dict[str, Any] = {
         "fault": name,

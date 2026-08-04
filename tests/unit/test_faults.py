@@ -15,7 +15,7 @@ def _success(*arguments, **kwargs) -> subprocess.CompletedProcess[str]:
 def test_pause_fault_is_label_checked_and_recorded(monkeypatch) -> None:
     observed: dict[str, object] = {}
     monkeypatch.setattr("terractl.faults.load_fault_state", lambda: None)
-    monkeypatch.setattr("terractl.faults.assert_environment_green", lambda: None)
+    monkeypatch.setattr("terractl.faults.assert_environment_green", lambda **_: None)
     monkeypatch.setattr("terractl.faults.compose_project", lambda: "project-one")
     monkeypatch.setattr("terractl.faults._service_container_id", lambda service: "container-one")
     monkeypatch.setattr("terractl.faults._docker", _success)
@@ -145,7 +145,7 @@ def test_two_live_containers_refuse_to_resolve(monkeypatch) -> None:
 def test_intent_is_recorded_before_the_container_is_paused(monkeypatch) -> None:
     writes: list[dict] = []
     monkeypatch.setattr("terractl.faults.load_fault_state", lambda: None)
-    monkeypatch.setattr("terractl.faults.assert_environment_green", lambda: None)
+    monkeypatch.setattr("terractl.faults.assert_environment_green", lambda **_: None)
     monkeypatch.setattr("terractl.faults.compose_project", lambda: "project-one")
     monkeypatch.setattr("terractl.faults._service_container_id", lambda service: "container-one")
     monkeypatch.setattr("terractl.faults._write_state", lambda state: writes.append(dict(state)))
@@ -165,7 +165,7 @@ def test_intent_is_recorded_before_the_container_is_paused(monkeypatch) -> None:
 def test_a_failed_pause_leaves_no_stale_state(tmp_path: Path, monkeypatch) -> None:
     state_path = tmp_path / "active-fault.json"
     monkeypatch.setattr("terractl.faults.load_fault_state", lambda: None)
-    monkeypatch.setattr("terractl.faults.assert_environment_green", lambda: None)
+    monkeypatch.setattr("terractl.faults.assert_environment_green", lambda **_: None)
     monkeypatch.setattr("terractl.faults.compose_project", lambda: "project-one")
     monkeypatch.setattr("terractl.faults._service_container_id", lambda service: "container-one")
     monkeypatch.setattr("terractl.faults.fault_state_path", lambda: state_path)

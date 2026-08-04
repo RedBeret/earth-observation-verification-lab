@@ -58,6 +58,14 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Fault injection refused to run whenever any service was paused, which made the
+  resilience drills impossible to execute. A drill pauses a worker to queue messages and
+  then injects a fault, so the paused container is the expected state rather than a broken
+  environment, but the readiness guard counted it as a missing service. The guard now
+  takes an explicit `allow_paused`, and only fault injection passes it. The clean-room
+  proof, the contract run, the performance run, and the post-recovery check all keep the
+  strict meaning. This is the same distinction the fault container lookup already made,
+  applied to the guard that runs beside it.
 - The contract and performance gates printed captured subprocess output directly, so the
   box drawing and arrow characters that Newman and k6 emit raised `UnicodeEncodeError` on
   a Windows console. Both gates had already run and written their reports by then, so a
