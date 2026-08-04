@@ -143,18 +143,25 @@ repository path named above exists and that every relative link resolves.
 
 ## Current state
 
-The static gates and the ingestion, telemetry, and correlation workflows are verified.
-The resilience drills, the Postman and k6 phases, and the clean-checkout run are
-implemented but have not yet been executed end to end on a Docker host, so they are
-reported as not observed rather than passing. `./scripts/terra.sh evidence` will say the
-same thing about any requirement whose test did not run.
+All forty requirements are observed and passing. `./scripts/verify-clean-checkout.sh`
+clones the current commit into a throwaway directory, builds a fresh environment there,
+and runs the whole acceptance sequence: the static gates, the live integration suite, the
+five test procedures, the Postman contract, the k6 performance gate, the fault injection
+drills, strict evidence reconciliation, and the clean-room isolation proof. It finishes by
+proving it left nothing running.
 
-Ten of the forty requirements are observed on the published commit. The other thirty are
-not observed, and none of them are passing. No check that has actually run is failing.
+Getting there took seven fixes, and none of them were reachable from a static check. A
+first build that could not finish inside its own timeout, a pinned container image that
+had never been published, console output that crashed a gate which had already passed,
+a readiness guard that made the fault drills impossible to run, and two unbounded waits
+that let a frozen dependency silently stop a worker instead of making it retry.
 
-That distinction is the point of the project, so it is applied to the project itself. The
-publish gate blocks on a check that ran and failed, and reports rather than blocks on one
-that never ran; `docs/DECISIONS.md` records why.
+The last one is the one worth reading about. Twenty nine of the forty requirements named
+tests that did not exist, mostly stale after renames, so those requirements could never be
+observed no matter how much of the suite ran. The traceability gate did not notice because
+it checked that a mapping existed, not that it resolved. The evidence model was right the
+whole time and said `not observed` for two thirds of the system while a green gate said
+everything was mapped. `docs/DECISIONS.md` records the reasoning.
 
 ## Scope and boundary
 

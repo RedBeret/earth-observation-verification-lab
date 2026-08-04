@@ -183,3 +183,29 @@ gate as full verification. That count is on the front page of the README for exa
 reason. Anyone wanting the stricter rule still has it: `./scripts/terra.sh evidence`
 without the flag fails while anything is unobserved, and that is what every CI runner
 executes.
+
+**Outcome.** The waiver was needed for exactly one publication. Once the clean checkout run
+executed end to end, all forty requirements were observed and the strict command passes on
+its own terms, so `--allow-unobserved` no longer changes the result. It stays because the
+distinction it draws is correct and because the first publication of any future stage will
+need it again, not because anything currently depends on it.
+
+## 12. A mapping is not evidence until it resolves
+
+**Context.** Every requirement names the test that verifies it, and the evidence builder
+looks that name up in the raw runner output by exact match. The traceability gate checked
+that the name was present and that the referenced procedure existed. It never checked that
+the test existed.
+
+**Decision.** The gate resolves every referenced test against the file and the function,
+and fails when one does not exist.
+
+**Why.** Twenty nine of forty references were stale after renames or named files that were
+never written. Those requirements could not be observed by any run, because the lookup
+could never match. The gate reported forty mapped and zero errors while the evidence
+reported two thirds of the system unverified, and nothing forced those two views to
+disagree out loud. `TST-004` had asked for this from the start.
+
+**Cost.** Renaming a test now breaks the traceability gate until the requirement that names
+it is updated. That is the point. The alternative is a mapping that drifts silently and an
+evidence package that quietly reports less coverage every time someone tidies a test name.
