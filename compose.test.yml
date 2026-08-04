@@ -22,7 +22,7 @@ services:
       org.northstar.environment: demo-west
 
   newman:
-    image: postman/newman:6.2.1-alpine
+    image: postman/newman:6.1.3-alpine
     entrypoint: ["newman"]
     command:
       - run

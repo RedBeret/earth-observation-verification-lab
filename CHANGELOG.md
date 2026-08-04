@@ -58,6 +58,10 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- The Newman service pinned `postman/newman:6.2.1-alpine`, which has never existed on
+  Docker Hub. The contract run failed to pull it and then reported only that no JSON
+  report was produced. The pin is now `6.1.3-alpine`, the newest published Alpine tag.
+  Every other pinned image was checked at the same time and all of them resolve.
 - `terra.sh up` capped the whole build and start at ten minutes, which a first run on a
   clean machine cannot meet. It pulls three service images and builds five of its own
   before anything is healthy, so the command reported a timeout while the build was still
