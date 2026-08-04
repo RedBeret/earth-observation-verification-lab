@@ -58,6 +58,18 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- The traceability gate accepted requirements that named tests which do not exist. It
+  checked that every requirement had an `automated_tests` field and that referenced
+  procedures existed, but never that the referenced test resolved, so it reported forty
+  requirements mapped and zero errors while twenty nine of those references were stale
+  after renames or pointed at files that were never written. Those requirements could
+  never be observed: the evidence package looked for an exact node id, never found it, and
+  recorded `not observed` permanently. The gate now resolves every referenced test, which
+  is what TST-004 asked for all along, and all twenty nine mappings were repaired against
+  the test that actually verifies each requirement.
+- `TST-002` required every automated system or integration test to reference a requirement
+  and had no test enforcing it, and neither high level suite referenced one. The check now
+  exists and both suites declare what they verify.
 - Both workers could stop consuming instead of retrying. Message handling called into the
   database and object store without a time bound, so a frozen dependency left the handler
   waiting inside its `try` block forever. The `except` branch that records the attempt,

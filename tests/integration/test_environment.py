@@ -1,3 +1,11 @@
+"""Live checks against the running dependencies rather than against mocks.
+
+Migrations applied, the object store bucket present, the streams declared, readiness
+reporting per dependency, and published ports bound to loopback only.
+
+Verifies: API-005, SEC-003
+"""
+
 import asyncio
 from pathlib import Path
 

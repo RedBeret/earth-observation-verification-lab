@@ -1,3 +1,11 @@
+"""End to end workflow: ingest, correlate, query provenance, then replay everything.
+
+One pass over the nominal path, asserting that a replay of the same scene and the same
+event changes no counts and produces no second correlation.
+
+Verifies: ING-002, ING-006, EVT-002, COR-001, COR-005, API-003
+"""
+
 import json
 from collections.abc import Iterator
 from pathlib import Path

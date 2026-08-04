@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,42 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"{path} must contain a YAML object")
     return data
+
+
+def _test_functions(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return {
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+    }
+
+
+def unresolved_tests(requirement: dict[str, Any], repo: Path) -> list[str]:
+    """Report every referenced test that does not exist.
+
+    A complete mapping is not the same as a real one. A requirement that names a test
+    which was renamed or never written can never be observed: the evidence package looks
+    for that exact node id, never finds it, and records `not observed` forever. Without
+    this check the traceability gate reports every requirement as mapped while the
+    evidence quietly reports most of them as unverified, and the two never disagree out
+    loud. TST-004 asks for exactly this.
+    """
+    problems: list[str] = []
+    for reference in requirement.get("automated_tests") or []:
+        text = str(reference)
+        if "::" not in text:
+            problems.append(f"references a malformed test id: {text}")
+            continue
+        relative, name = text.split("::", 1)
+        path = repo / relative
+        if not path.is_file():
+            problems.append(f"references a missing test file: {text}")
+            continue
+        # A parametrized id carries a suffix the function name does not have.
+        if name.split("[")[0] not in _test_functions(path):
+            problems.append(f"references a test that does not exist: {text}")
+    return problems
 
 
 def validate_traceability(root: Path | None = None) -> TraceabilityResult:
@@ -65,6 +102,8 @@ def validate_traceability(root: Path | None = None) -> TraceabilityResult:
         ):
             if field_name not in requirement:
                 result.errors.append(f"{identifier} missing {field_name}")
+        for problem in unresolved_tests(requirement, repo):
+            result.errors.append(f"{identifier} {problem}")
 
     mapped_ids: set[str] = set()
     for mapping in mappings:
