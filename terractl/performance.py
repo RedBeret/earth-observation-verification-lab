@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any, cast
 
+from terractl.console import write_console
 from terractl.environment import ensure_artifact_directories, project_root
 
 THRESHOLDS_RELATIVE = Path("performance/thresholds.json")
@@ -78,9 +80,9 @@ def run_performance() -> int:
     assert_environment_green()
     thresholds = load_thresholds()
     result = run_compose("run", "--rm", "--no-deps", "k6", include_test=True, timeout=900)
-    print(result.stdout, end="")
+    write_console(result.stdout)
     if result.stderr:
-        print(result.stderr, end="")
+        write_console(result.stderr, sys.stderr)
     summary_file = summary_path()
     if not summary_file.is_file():
         print("k6 produced no summary; treating the run as not observed.")

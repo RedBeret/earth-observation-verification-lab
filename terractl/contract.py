@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast
 
+from terractl.console import write_console
 from terractl.environment import artifacts_root, ensure_artifact_directories, project_root
 
 COLLECTION_RELATIVE = Path("contract/postman/terrawatch.postman_collection.json")
@@ -119,9 +121,9 @@ def run_newman() -> int:
     assert_environment_green()
     json_report, junit_report = newman_reports()
     result = run_compose("run", "--rm", "--no-deps", "newman", include_test=True, timeout=600)
-    print(result.stdout, end="")
+    write_console(result.stdout)
     if result.stderr:
-        print(result.stderr, end="")
+        write_console(result.stderr, sys.stderr)
     if not json_report.is_file():
         print(f"Newman produced no JSON report at {json_report.relative_to(project_root())}.")
         return 1

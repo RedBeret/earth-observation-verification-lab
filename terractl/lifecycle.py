@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TextIO, cast
 
+from terractl.console import write_console
 from terractl.environment import initialize_environment, project_root
 from terractl.safety import assert_project_identity
 
@@ -22,10 +23,8 @@ class ComposeResult:
 
 
 def _write_console(value: str, stream: TextIO | None = None) -> None:
-    target = stream or sys.stdout
-    encoding = target.encoding or "utf-8"
-    safe_value = value.encode(encoding, errors="replace").decode(encoding)
-    target.write(safe_value)
+    """Kept as the lifecycle-local name for the shared console writer."""
+    write_console(value, stream)
 
 
 def _collect_lifecycle_failure(context: str) -> None:

@@ -58,6 +58,12 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- The contract and performance gates printed captured subprocess output directly, so the
+  box drawing and arrow characters that Newman and k6 emit raised `UnicodeEncodeError` on
+  a Windows console. Both gates had already run and written their reports by then, so a
+  finished, passing step reported a crash. Compose output was already protected against
+  this; the same protection now covers every path that echoes subprocess output, and the
+  writer lives in one module rather than being private to the lifecycle code.
 - The Newman service pinned `postman/newman:6.2.1-alpine`, which has never existed on
   Docker Hub. The contract run failed to pull it and then reported only that no JSON
   report was produced. The pin is now `6.1.3-alpine`, the newest published Alpine tag.
