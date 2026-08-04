@@ -9,6 +9,7 @@ from terractl.lifecycle import (
     _write_console,
     assert_environment_green,
     compose_up,
+    up_timeout_seconds,
 )
 
 pytestmark = pytest.mark.unit
@@ -86,3 +87,23 @@ def test_green_environment_requires_running_healthy_services(monkeypatch) -> Non
     services[0]["Health"] = "unhealthy"
     with pytest.raises(RuntimeError, match="not healthy"):
         assert_environment_green()
+
+
+def test_the_startup_timeout_allows_a_cold_first_build(monkeypatch) -> None:
+    """A clean machine pulls three service images and builds five of its own before
+    anything is healthy. The ceiling has to survive that, or the first run someone ever
+    does is the one that fails."""
+    monkeypatch.delenv("TERRA_UP_TIMEOUT_SECONDS", raising=False)
+    assert up_timeout_seconds() >= 1200
+
+
+def test_the_startup_timeout_is_overridable(monkeypatch) -> None:
+    monkeypatch.setenv("TERRA_UP_TIMEOUT_SECONDS", "2400")
+    assert up_timeout_seconds() == 2400
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "soon"])
+def test_an_unusable_startup_timeout_is_refused(monkeypatch, value: str) -> None:
+    monkeypatch.setenv("TERRA_UP_TIMEOUT_SECONDS", value)
+    with pytest.raises(RuntimeError):
+        up_timeout_seconds()

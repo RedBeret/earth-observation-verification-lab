@@ -58,6 +58,13 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- `terra.sh up` capped the whole build and start at ten minutes, which a first run on a
+  clean machine cannot meet. It pulls three service images and builds five of its own
+  before anything is healthy, so the command reported a timeout while the build was still
+  making progress, and the environment finished coming up healthy afterwards. The ceiling
+  is now generous by default and `TERRA_UP_TIMEOUT_SECONDS` overrides it. Found by running
+  the clean checkout verification on a machine with no images cached, which is the same
+  path anyone cloning the repository takes.
 - The publish gate never pushed `main` when it created the repository. `gh repo create
   --push` publishes only the checked-out branch, which is a stage branch, so `main` would
   have been absent and a stage branch would have become the default. Every stage pull

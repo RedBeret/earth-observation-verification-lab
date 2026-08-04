@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -50,6 +51,27 @@ def compose_project() -> str:
     return _local_values()["COMPOSE_PROJECT_NAME"]
 
 
+# A first run on a clean machine pulls PostGIS, MinIO, and NATS and then builds five
+# application images, which compiles the heavier wheels. That is unavoidably slow, and it
+# is exactly what someone cloning this repository does. Ten minutes is not enough for it,
+# so the ceiling here is generous and only exists to stop a genuinely wedged build from
+# hanging forever. Override it when a slow connection needs more room.
+DEFAULT_UP_TIMEOUT_SECONDS = 1800
+
+
+def up_timeout_seconds() -> int:
+    raw = os.environ.get("TERRA_UP_TIMEOUT_SECONDS")
+    if not raw:
+        return DEFAULT_UP_TIMEOUT_SECONDS
+    try:
+        value = int(raw)
+    except ValueError as error:
+        raise RuntimeError("TERRA_UP_TIMEOUT_SECONDS must be a whole number of seconds") from error
+    if value <= 0:
+        raise RuntimeError("TERRA_UP_TIMEOUT_SECONDS must be greater than zero")
+    return value
+
+
 def compose_command(*arguments: str, include_test: bool = False) -> list[str]:
     command = [
         "docker",
@@ -91,7 +113,7 @@ def compose_up() -> int:
         "--wait",
         "--wait-timeout",
         "180",
-        timeout=600,
+        timeout=up_timeout_seconds(),
     )
     _write_console(result.stdout)
     if result.returncode:

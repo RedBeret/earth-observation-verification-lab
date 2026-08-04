@@ -13,6 +13,11 @@ bundle automatically and prints its path.
 - `.env.local` is regenerated on every `up`, so a stale value is not the cause. If the
   file was deleted, credentials are regenerated and existing volumes will no longer
   match. Run `./scripts/terra.sh down` and start again.
+- The first `up` on a clean machine is slow. It pulls PostGIS, MinIO, and NATS and then
+  builds five application images, which compiles the heavier wheels. Later runs reuse
+  those layers and take a fraction of the time. If the first run reports that the command
+  timed out, the build was still making progress rather than stuck, and
+  `TERRA_UP_TIMEOUT_SECONDS` raises the ceiling for a slow connection.
 
 ## A service is running but not ready
 
