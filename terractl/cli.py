@@ -22,6 +22,7 @@ from terractl.locking import exclusive_run_lock
 from terractl.performance import run_performance
 from terractl.procedures import run_procedure
 from terractl.reporting import generate_evidence
+from terractl.reset import reset_plan, reset_project
 from terractl.security import run_security_gate
 from terractl.traceability import validate_traceability
 from terractl.validation import validate_repository
@@ -144,6 +145,29 @@ def status() -> None:
 @app.command()
 def down() -> None:
     raise typer.Exit(compose_down())
+
+
+@app.command()
+def reset(apply: bool = typer.Option(False, "--apply")) -> None:
+    """Tear the project down and remove what teardown leaves behind.
+
+    Reports what it would remove and changes nothing unless `--apply` is given, because
+    this deletes the evidence from the last run.
+    """
+    plan = reset_plan()
+    if not apply:
+        print(json.dumps({**plan, "applied": False}, indent=2, sort_keys=True))
+        print("Refusing to reset without --apply.")
+        raise typer.Exit(2)
+    code = compose_down()
+    if code:
+        raise typer.Exit(code)
+    try:
+        removed = reset_project()
+    except Exception as error:
+        print(f"Reset failed: {type(error).__name__}")
+        raise typer.Exit(1) from error
+    print(json.dumps({**removed, "applied": True}, indent=2, sort_keys=True))
 
 
 @app.command(name="clean-room")

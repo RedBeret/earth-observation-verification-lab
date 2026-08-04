@@ -38,6 +38,17 @@ All notable changes to this project are documented here.
 - Operator, architecture, test plan, interface control, and troubleshooting documents,
   with tests that verify every documented command, path, and link.
 - Clean-checkout verification and publish-gate scripts.
+- `terra.sh reset` returns the checkout to the state a fresh clone would be in. Teardown
+  removes containers, volumes, and networks and deliberately keeps everything else, so a
+  built image, the generated `.env.local`, and every artifact from the last run survive it.
+  Reset removes exactly those and nothing else, keeping the artifact directories and their
+  placeholders so the next run has somewhere to write. It reports and changes nothing
+  without `--apply`, because it deletes the evidence from the last run.
+- `scripts/shutdown-host.sh` resets the project and then stops Docker Desktop and WSL,
+  which is what actually releases the memory on Windows. It is a script rather than a
+  `terra.sh` subcommand on purpose: every pipeline here may call `bootstrap.sh` and
+  `terra.sh` and nothing else, so a subcommand that stopped the daemon could be wired into
+  CI and would kill the runner executing it.
 
 ### Security
 

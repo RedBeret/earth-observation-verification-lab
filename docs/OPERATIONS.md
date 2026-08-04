@@ -27,10 +27,31 @@ whatever it reports before continuing.
 | `./scripts/terra.sh up` | Build and start the labeled Compose project |
 | `./scripts/terra.sh status` | Report required services and their health |
 | `./scripts/terra.sh down` | Remove only verified project containers |
+| `./scripts/terra.sh reset` | Report what a reset would remove, and change nothing |
+| `./scripts/terra.sh reset --apply` | Tear down, then remove the built image, the generated artifacts, and `.env.local`, leaving the checkout as a fresh clone |
 | `./scripts/terra.sh diagnostics` | Write a redacted diagnostic bundle |
 | `./scripts/terra.sh evidence` | Render and reconcile the evidence package |
 | `./scripts/terra.sh evidence --allow-unobserved` | Same, but exit zero when the only failures are requirements that were never observed. A check that ran and failed still exits non-zero. Used by the publish gate |
 | `./scripts/terra.sh clean-room` | Prove teardown touches nothing else |
+
+## Giving the machine back
+
+`./scripts/terra.sh reset --apply` returns the checkout to the state a fresh clone would be
+in. It tears the project down, then removes the built image, every generated artifact, and
+the generated `.env.local`. The artifact directories and their placeholders survive,
+because the next run needs somewhere to write. Without `--apply` it prints what it would
+remove and changes nothing, which matters because a reset deletes the evidence from the
+last run.
+
+`./scripts/shutdown-host.sh --apply` does that and then stops Docker itself: it quits
+Docker Desktop and runs `wsl --shutdown`, which is what actually releases the memory on
+Windows. On other systems it resets the project and leaves the daemon to you.
+
+Stopping Docker is deliberately not a `terra.sh` subcommand. Every pipeline in this
+repository is allowed to call `./scripts/bootstrap.sh` and `./scripts/terra.sh` and nothing
+else, so a subcommand that stopped the daemon could be wired into CI and would kill the
+runner executing it. Project cleanup belongs in the CLI. Stopping the host's Docker does
+not.
 
 ## Test levels
 
